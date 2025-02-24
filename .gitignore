@@ -1,5 +1,7 @@
-API/obj/* 
-API/bin/* 
+.idea
 
-Infrastructure/obj/*
-Infrastructure/bin/*
+[Dd]ebug/
+[Rr]elease/
+x64/
+[Bb]in/
+[Oo]bj/
