@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "dgSpecHash": "bnBQciGXn0Cn3k1gtPFt9x/xJyCPAnUjOFUIzZn3ilby9Rq2erIM8+m2hVlTdgJki+z+KBRxp3bZhLzyV2S4HA==",
+  "success": true,
+  "projectFilePath": "/Users/evjepsen/RiderProjects/BYOK/API/API.csproj",
+  "expectedPackageFiles": [
+    "/Users/evjepsen/.nuget/packages/azure.core/1.44.1/azure.core.1.44.1.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/azure.identity/1.13.2/azure.identity.1.13.2.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/microsoft.aspnetcore.openapi/8.0.12/microsoft.aspnetcore.openapi.8.0.12.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/microsoft.bcl.asyncinterfaces/6.0.0/microsoft.bcl.asyncinterfaces.6.0.0.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/microsoft.extensions.apidescription.server/6.0.5/microsoft.extensions.apidescription.server.6.0.5.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/microsoft.identity.client/4.67.2/microsoft.identity.client.4.67.2.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/microsoft.identity.client.extensions.msal/4.67.2/microsoft.identity.client.extensions.msal.4.67.2.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/microsoft.identitymodel.abstractions/6.35.0/microsoft.identitymodel.abstractions.6.35.0.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/microsoft.openapi/1.6.14/microsoft.openapi.1.6.14.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/swashbuckle.aspnetcore/6.6.2/swashbuckle.aspnetcore.6.6.2.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/swashbuckle.aspnetcore.swagger/6.6.2/swashbuckle.aspnetcore.swagger.6.6.2.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/swashbuckle.aspnetcore.swaggergen/6.6.2/swashbuckle.aspnetcore.swaggergen.6.6.2.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/swashbuckle.aspnetcore.swaggerui/6.6.2/swashbuckle.aspnetcore.swaggerui.6.6.2.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/system.clientmodel/1.1.0/system.clientmodel.1.1.0.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/system.diagnostics.diagnosticsource/6.0.1/system.diagnostics.diagnosticsource.6.0.1.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/system.memory/4.5.5/system.memory.4.5.5.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/system.memory.data/6.0.0/system.memory.data.6.0.0.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/system.numerics.vectors/4.5.0/system.numerics.vectors.4.5.0.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/system.runtime.compilerservices.unsafe/6.0.0/system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/system.security.cryptography.protecteddata/4.5.0/system.security.cryptography.protecteddata.4.5.0.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/system.text.encodings.web/6.0.0/system.text.encodings.web.6.0.0.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/system.text.json/6.0.10/system.text.json.6.0.10.nupkg.sha512",
+    "/Users/evjepsen/.nuget/packages/system.threading.tasks.extensions/4.5.4/system.threading.tasks.extensions.4.5.4.nupkg.sha512"
+  ],
+  "logs": []
+}
