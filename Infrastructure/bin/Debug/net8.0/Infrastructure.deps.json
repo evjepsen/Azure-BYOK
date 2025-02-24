@@ -9,6 +9,7 @@
       "Infrastructure/1.0.0": {
         "dependencies": {
           "Azure.Identity": "1.13.2",
+          "Azure.Security.KeyVault.Keys": "4.7.0",
           "System.IdentityModel.Tokens.Jwt": "8.5.0"
         },
         "runtime": {
@@ -45,6 +46,20 @@
           "lib/net8.0/Azure.Identity.dll": {
             "assemblyVersion": "1.13.2.0",
             "fileVersion": "1.1300.225.6404"
+          }
+        }
+      },
+      "Azure.Security.KeyVault.Keys/4.7.0": {
+        "dependencies": {
+          "Azure.Core": "1.44.1",
+          "System.Memory": "4.5.5",
+          "System.Text.Json": "6.0.10",
+          "System.Threading.Tasks.Extensions": "4.5.4"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Azure.Security.KeyVault.Keys.dll": {
+            "assemblyVersion": "4.7.0.0",
+            "fileVersion": "4.700.24.51403"
           }
         }
       },
@@ -242,6 +257,13 @@
       "sha512": "sha512-CngQVQELdzFmsGSWyGIPIUOCrII7nApMVWxVmJCKQQrWxRXcNquCsZ+njRJRnhFUfD+KMAhpjyRCaceE4EOL6A==",
       "path": "azure.identity/1.13.2",
       "hashPath": "azure.identity.1.13.2.nupkg.sha512"
+    },
+    "Azure.Security.KeyVault.Keys/4.7.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-1JOyCLvSfYVtxVV6dmA4YP4kJd+u+PE41M27U1po8XlglRcW3YZhet/O90fkEbpmiuNka1XjM2qrT9A++izloQ==",
+      "path": "azure.security.keyvault.keys/4.7.0",
+      "hashPath": "azure.security.keyvault.keys.4.7.0.nupkg.sha512"
     },
     "Microsoft.Bcl.AsyncInterfaces/6.0.0": {
       "type": "package",

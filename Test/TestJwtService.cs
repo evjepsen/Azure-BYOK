@@ -19,7 +19,7 @@ public class TestJwtService
     {
         // Given a token
         var token = _jwtService.CreateToken();
-        // When I check whether it has a "Aud" field
+        // When I check whether it has an "Aud" field
         var jwtToken = token as JwtSecurityToken;
         var audiences = jwtToken!.Claims
             .Where(c => c.Type == "aud")

@@ -5,5 +5,8 @@ namespace Infrastructure.Interfaces;
 
 public interface IKeyVaultService
 {
-    public Response<KeyVaultKey> ImportKey(string name, string value, KeyType keyType);
+    public Response<KeyVaultKey> ImportKey(string name, string byokJson);
+
+    public Response<KeyVaultKey> GenerateKek(string name);
+    
 }

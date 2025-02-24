@@ -1,3 +1,6 @@
+using Infrastructure;
+using Infrastructure.Interfaces;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -5,6 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Add the Services defined in infrastructure 
+builder.Services.AddScoped<IKeyVaultService, KeyVaultService>();
 
 var app = builder.Build();
 
