@@ -5,3 +5,6 @@
 x64/
 [Bb]in/
 [Oo]bj/
+API/obj
+Infrastructure/obj
+Test/obj

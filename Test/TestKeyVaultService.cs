@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using Azure.Identity;
 using Azure.Security.KeyVault.Keys.Cryptography;
@@ -28,9 +29,9 @@ public class TestKeyVaultService
         
         var kek = _keyVaultService.GenerateKek("test-kek").Value;
 
-        var cryptoClient = new CryptographyClient(kek.Id, new DefaultAzureCredential());
+        var cryptoClient = kek.Key.ToRSA();
 
-        var res = cryptoClient.Encrypt(EncryptionAlgorithm.RsaOaep, testKeyBytes).Ciphertext;
+        var res = cryptoClient.Encrypt(testKeyBytes, RSAEncryptionPadding.OaepSHA256);
 
         _keyVaultService.ImportKey("New key", res, kek.Id.ToString());
 

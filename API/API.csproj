@@ -52,18 +52,22 @@
       <Content Include="bin\Debug\net8.0\System.Memory.Data.dll" />
       <Content Include="bin\Debug\net8.0\System.Security.Cryptography.ProtectedData.dll" />
       <Content Remove="bin\**" />
+      <Content Remove="obj\**" />
     </ItemGroup>
 
     <ItemGroup>
       <Compile Remove="bin\**" />
+      <Compile Remove="obj\**" />
     </ItemGroup>
 
     <ItemGroup>
       <EmbeddedResource Remove="bin\**" />
+      <EmbeddedResource Remove="obj\**" />
     </ItemGroup>
 
     <ItemGroup>
       <None Remove="bin\**" />
+      <None Remove="obj\**" />
     </ItemGroup>
 
 </Project>
