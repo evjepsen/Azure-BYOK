@@ -50,3 +50,5 @@
 /Users/evjepsen/RiderProjects/BYOK/API/bin/Debug/net8.0/Infrastructure.dll
 /Users/evjepsen/RiderProjects/BYOK/API/bin/Debug/net8.0/Infrastructure.pdb
 /Users/evjepsen/RiderProjects/BYOK/API/obj/Debug/net8.0/API.sourcelink.json
+/Users/evjepsen/RiderProjects/BYOK/API/bin/Debug/net8.0/Microsoft.AspNetCore.WebUtilities.dll
+/Users/evjepsen/RiderProjects/BYOK/API/bin/Debug/net8.0/Microsoft.Net.Http.Headers.dll

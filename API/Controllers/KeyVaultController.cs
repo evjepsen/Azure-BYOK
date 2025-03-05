@@ -6,7 +6,6 @@ namespace API.Controllers;
 [Route("[controller]")]
 public class KeyVaultController : Controller
 {
-
     private readonly IKeyVaultService _keyVaultService;
     
     public KeyVaultController(IKeyVaultService keyVaultService)
@@ -22,12 +21,12 @@ public class KeyVaultController : Controller
         return Ok(kek.Value);
     }
     
-    [HttpPost("{name}/{byokJson}")]
-    public IActionResult ImportTdeKey(string name, string byokJson)
+    [HttpPost("{name}/{byokJson}/{kekId}")]
+    public IActionResult ImportTdeKey(string name, byte[] byokJson, string kekId)
     {
-        var kek = _keyVaultService.ImportKey(name, byokJson);
+        var kek = _keyVaultService.ImportKey(name, byokJson, kekId);
         
-        return Ok(kek.Value);
+        return Ok(kek);
     }
     
 }

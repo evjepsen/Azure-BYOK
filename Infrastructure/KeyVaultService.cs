@@ -1,4 +1,4 @@
-using System.Text.Json;
+using System.Text;
 using Azure;
 using Azure.Identity;
 using Azure.Security.KeyVault.Keys;
@@ -8,10 +8,14 @@ namespace Infrastructure;
 
 public class KeyVaultService : IKeyVaultService
 {
-    private KeyClient _client;
+    private readonly KeyClient _client;
+    private readonly ITokenService _tokenService;
+    private readonly HttpClient _httpClient;
 
-    public KeyVaultService()
+    public KeyVaultService(ITokenService tokenService)
     {
+        _httpClient = new HttpClient();
+        _tokenService = tokenService;
         // Credentials for authentication
         var credentials = new DefaultAzureCredential(new DefaultAzureCredentialOptions
         {
@@ -26,47 +30,43 @@ public class KeyVaultService : IKeyVaultService
     }
 
 
-    public Response<KeyVaultKey> ImportKey(string name, string byokJson)
+    public async Task<string> ImportKey(string name, byte[] encryptedData, string kekId)
     {
-        // Deserialize the BYOK JSON Web Key
-        JsonWebKey? jwk;
+        // Create the BYOK Blob for upload
+        var transferBlob = _tokenService.CreateKeyTransferBlob(encryptedData, kekId);
         
-        try
+        // (Manually) Set up the JsonWebKey
+        var requestBody = _tokenService.CreateBodyForRequest(transferBlob);
+        
+        string url = $"https://byok-cloud-kv.vault.azure.net/keys/{name}/import?api-version=7.4";
+        
+        var content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+        
+        // Send request
+        var response = await _httpClient.PostAsync(url, content);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        
+        if (!response.IsSuccessStatusCode)
         {
-            jwk = JsonSerializer.Deserialize<JsonWebKey>(byokJson);
-            if (jwk == null) throw new JsonException("Deserialized JSON Web Key is null.");
-        } 
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Failed to deserialize BYOK JSON Web Key.", ex);
+            throw new Exception($"Failed to import key: {response.StatusCode} - {responseContent}");
         }
-
-        // Create key import options
-        ImportKeyOptions importKeyOptions = new ImportKeyOptions(name, jwk)
-        {
-            HardwareProtected = true,
-            Properties =
-            {
-                Enabled = true,
-                Exportable = false,
-                ExpiresOn = DateTimeOffset.Now.AddDays(90),
-            }
-        };
         
-        // Import the key
-        return _client.ImportKey(importKeyOptions);
+        return responseContent;
     }
 
+    // Use RSA-HSM as Key Encryption Key
     public Response<KeyVaultKey> GenerateKek(string name)
     {
-        var keyOptions = new CreateKeyOptions
+        var keyOptions = new CreateRsaKeyOptions(name, true)
         {
-            Enabled = true,                                 // The key is ready to be used
-            Exportable = false,                             // The private key cannot be exported 
-            ExpiresOn = DateTimeOffset.Now.AddHours(12),    // Is active for 12 hours
-            KeyOperations = { KeyOperation.UnwrapKey }      // Can only be used to unwrap the actual TDE protector
+            Enabled = true,                                                         // The key is ready to be used
+            Exportable = false,                                                     // The private key cannot be exported 
+            ExpiresOn = DateTimeOffset.Now.AddHours(12),                            // Is active for 12 hours
+            KeyOperations = { KeyOperation.Import },                                // Can only be used to import the TDE Protector
+            KeySize = 4096                                                          // Key size of 4096 bits 
         };
 
-        return _client.CreateKey(name, KeyType.RsaHsm, keyOptions);
+        return _client.CreateRsaKey(keyOptions);
     }
+    
 }
