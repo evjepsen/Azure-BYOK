@@ -1,11 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
-using Azure.Identity;
-using Azure.Security.KeyVault.Keys.Cryptography;
-using Infrastructure;
-using Infrastructure.Interfaces;
-using Test.TestHelpers;
-
 namespace Test;
 
 public class TestEnvVars
@@ -14,15 +6,15 @@ public class TestEnvVars
     public void Setup()
     {
         DotNetEnv.Env.TraversePath().Load();
-
     }
 
     [Test]
-    public void VaultURIShouldExist()
+    public void ShouldVaultUriExist()
     {
-        string currentDirectory = Directory.GetCurrentDirectory();
-        Console.WriteLine(currentDirectory);
-        var vault_uri = Environment.GetEnvironmentVariable("VAULT_URI");
-        Assert.IsNotNull(vault_uri);
+        // Given a DotNetEnv
+        // When I ask for An environment variable
+        var vaultUri = Environment.GetEnvironmentVariable("VAULT_URI");
+        // Then it should be there
+        Assert.IsNotNull(vaultUri);
     } 
 }

@@ -1,8 +1,7 @@
+using DotNetEnv;
+using DotNetEnv.Configuration;
 using Infrastructure;
 using Infrastructure.Interfaces;
-
-// add environment variables to Environment.GetEnvironmentVariable() function
-DotNetEnv.Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +14,9 @@ builder.Services.AddSwaggerGen();
 // Add the Services defined in infrastructure
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IKeyVaultService, KeyVaultService>();
+
+// Add environment variables to Environment.GetEnvironmentVariable() function
+builder.Configuration.AddDotNetEnv(".env", LoadOptions.TraversePath());
 
 var app = builder.Build();
 
