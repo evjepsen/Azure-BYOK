@@ -37,7 +37,7 @@ public class KeyVaultService : IKeyVaultService
     }
 
 
-    public async Task<string> ImportKey(string name, byte[] encryptedData, string kekId)
+    public async Task<string> UploadKey(string name, byte[] encryptedData, string kekId)
     {
         // Create the BYOK Blob for upload
         var transferBlob = _tokenService.CreateKeyTransferBlob(encryptedData, kekId);

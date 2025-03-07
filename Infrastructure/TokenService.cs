@@ -9,16 +9,17 @@ namespace Infrastructure;
 
 public class TokenService : ITokenService
 {
-    public string SerializeJsonObject(object jsonObject)
+    private string SerializeJsonObject(object jsonObject)
     {
         return JsonSerializer.Serialize(jsonObject, new JsonSerializerOptions { WriteIndented = true });
     }
+    
     public KeyTransferBlob CreateKeyTransferBlob(byte[] cipherText, string kekId)
     {
         var keyTransferBlob = new KeyTransferBlob
         {
             SchemaVersion = "1.0.0",
-            Header = new HeaderObjects
+            Header = new HeaderObject
             {
                 Kid = kekId, // The id of the KEK
                 Alg = "dir",

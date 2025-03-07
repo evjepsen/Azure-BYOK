@@ -6,13 +6,13 @@ namespace Infrastructure.Interfaces;
 public interface IKeyVaultService
 {
     /// <summary>
-    /// Import the customer BYOK TDE protector
+    /// Upload the customer BYOK TDE protector
     /// </summary>
     /// <param name="name">Name of the TDE protector</param>
     /// <param name="encryptedData">The BYOK TDE protector encrypted under KEK</param>
     /// <param name="kekId">Key identifier of the KEK used</param>
     /// <returns></returns>
-    public Task<string> ImportKey(string name, byte[] encryptedData, string kekId);
+    public Task<string> UploadKey(string name, byte[] encryptedData, string kekId);
 
     /// <summary>
     /// Generate a Key Encryption Key (KEK) to protect the customer's TDE protector
