@@ -14,12 +14,12 @@ public class TokenService : ITokenService
             schema_version = "1.0.0",
             header = new
             {
-                kid = kekId, // Hardcoded for testing purposes - is the id of the KEK
+                kid = kekId,                    // The id of the KEK
                 alg = "dir",
                 enc = "CKM_RSA_AES_KEY_WRAP"
             },
             ciphertext = Base64UrlEncoder.Encode(cipherText),
-            generator = "BYOK tool name and version; source HSM name and firmware version"
+            generator = "BYOK v1.0; Azure Key Vault"
         };
 
         return JsonSerializer.Serialize(jsonObject, new JsonSerializerOptions { WriteIndented = true });
@@ -40,7 +40,7 @@ public class TokenService : ITokenService
                kty = "RSA-HSM",
                key_ops = new [] {
                    "decrypt",
-                   "encrypt"
+                   "encrypt",
                },
                key_hsm = transferBlobBase64Encoded 
             },
@@ -51,6 +51,5 @@ public class TokenService : ITokenService
         };
 
         return JsonSerializer.Serialize(jsonObject, new JsonSerializerOptions { WriteIndented = true });
-
     }
 }

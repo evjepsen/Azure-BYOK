@@ -1,7 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
-using Azure.Identity;
-using Azure.Security.KeyVault.Keys.Cryptography;
 using Infrastructure;
 using Infrastructure.Interfaces;
 using Test.TestHelpers;
@@ -12,28 +8,29 @@ public class TestKeyVaultService
 {
     private ITokenService _tokenService;
     private IKeyVaultService _keyVaultService;
+    private FakeHsm _hsm;
     
     [SetUp]
     public void Setup()
     {
         _tokenService = new TokenService();
         _keyVaultService = new KeyVaultService(_tokenService);
+        _hsm = new FakeHsm();
     }
 
     [Test]
-    public void ShouldBePossibleToEncryptKeyWithKekAndUpload()
+    public async Task ShouldBePossibleToEncryptKeyWithKekAndUpload()
     {
-        var testKey = TestHelper.CreateTestKey();
+        var kekName = $"kek-{Guid.NewGuid()}";
 
-        var testKeyBytes = Encoding.UTF8.GetBytes(testKey.ToString());
+        var kek = _keyVaultService.GenerateKek(kekName).Value;
+
+        var transferBlob = _hsm.SimulateHsm(kek);
+
+        var newKeyName = $"new-key-{Guid.NewGuid()}";
+
+        var kvRes = await _keyVaultService.ImportKey(newKeyName, transferBlob, kek.Id.ToString());
         
-        var kek = _keyVaultService.GenerateKek("test-kek").Value;
-
-        var cryptoClient = kek.Key.ToRSA();
-
-        var res = cryptoClient.Encrypt(testKeyBytes, RSAEncryptionPadding.OaepSHA256);
-
-        _keyVaultService.ImportKey("New key", res, kek.Id.ToString());
-
+        Assert.True(kvRes.Contains("key"));
     } 
 }
