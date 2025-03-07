@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Net.Http.Headers;
 using System.Text;
 using Azure;
@@ -29,7 +30,7 @@ public class KeyVaultService : IKeyVaultService
         
         // the azure key vault client
         _client = new KeyClient(
-            new Uri("https://byok-cloud-kv.vault.azure.net/"),
+            new Uri(Environment.GetEnvironmentVariable("VAULT_URI")),
             _tokenCredential);
         
         // Scope for Azure Key Vault and the credentials
@@ -45,7 +46,7 @@ public class KeyVaultService : IKeyVaultService
         // (Manually) Set up the JsonWebKey
         var requestBody = _tokenService.CreateBodyForRequest(transferBlob);
         
-        string url = $"https://byok-cloud-kv.vault.azure.net/keys/{name}/import?api-version=7.4";
+        string url = $"{Environment.GetEnvironmentVariable("VAULT_URI")}/keys/{name}/import?api-version=7.4";
         
         var content = new StringContent(requestBody, Encoding.UTF8, "application/json");
         
