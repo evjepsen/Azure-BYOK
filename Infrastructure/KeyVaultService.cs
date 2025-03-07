@@ -1,7 +1,9 @@
+using System.Collections;
 using System.Text;
 using Azure;
 using Azure.Identity;
 using Azure.Security.KeyVault.Keys;
+using DotNetEnv;
 using Infrastructure.Interfaces;
 
 namespace Infrastructure;
@@ -20,12 +22,12 @@ public class KeyVaultService : IKeyVaultService
         var credentials = new DefaultAzureCredential(new DefaultAzureCredentialOptions
         {
             // Exclude ManagedIdentityCredential when running locally
-            ManagedIdentityClientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID")
+            // ManagedIdentityClientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID")
         });
         
         // the azure key vault client
         _client = new KeyClient(
-            new Uri("https://byok-cloud-kv.vault.azure.net/"),
+            new Uri(Environment.GetEnvironmentVariable("VAULT_URI")),
             credentials);
     }
 
@@ -38,7 +40,7 @@ public class KeyVaultService : IKeyVaultService
         // (Manually) Set up the JsonWebKey
         var requestBody = _tokenService.CreateBodyForRequest(transferBlob);
         
-        string url = $"https://byok-cloud-kv.vault.azure.net/keys/{name}/import?api-version=7.4";
+        string url = $"{Environment.GetEnvironmentVariable("VAULT_URI")}/keys/{name}/import?api-version=7.4";
         
         var content = new StringContent(requestBody, Encoding.UTF8, "application/json");
         

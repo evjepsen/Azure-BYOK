@@ -1,6 +1,9 @@
 using Infrastructure;
 using Infrastructure.Interfaces;
 
+// add environment variables to Environment.GetEnvironmentVariable() function
+DotNetEnv.Env.TraversePath().Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
