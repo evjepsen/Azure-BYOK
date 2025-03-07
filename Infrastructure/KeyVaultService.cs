@@ -30,7 +30,7 @@ public class KeyVaultService : IKeyVaultService
         
         // the azure key vault client
         _client = new KeyClient(
-            new Uri(Environment.GetEnvironmentVariable("VAULT_URI")),
+            new Uri(Environment.GetEnvironmentVariable("VAULT_URI") ?? throw new InvalidOperationException("No Vault URI set")),
             _tokenCredential);
         
         // Scope for Azure Key Vault and the credentials
