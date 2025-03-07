@@ -24,7 +24,7 @@ public class KeyVaultController : Controller
     [HttpPost("{name}/{byokJson}/{kekId}")]
     public IActionResult ImportTdeKey(string name, byte[] byokJson, string kekId)
     {
-        var kek = _keyVaultService.ImportKey(name, byokJson, kekId);
+        var kek = _keyVaultService.UploadKey(name, byokJson, kekId);
         
         return Ok(kek);
     }

@@ -1,9 +1,11 @@
+using Infrastructure.Models;
+
 namespace Infrastructure.Interfaces;
 
 public interface ITokenService
 {
-    public string CreateKeyTransferBlob(byte[] cipherText, string kekId);
+    public KeyTransferBlob CreateKeyTransferBlob(byte[] cipherText, string kekId);
 
-    public string CreateBodyForRequest(string transferBlob);
+    public string CreateBodyForRequest(KeyTransferBlob transferBlob);
 
 }
