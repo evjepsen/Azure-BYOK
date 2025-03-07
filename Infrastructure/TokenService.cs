@@ -2,37 +2,45 @@ using System.Text;
 using Infrastructure.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using Infrastructure.Models;
 
 namespace Infrastructure;
 
 public class TokenService : ITokenService
 {
-    public string CreateKeyTransferBlob(byte[] cipherText, string kekId)
+    public string SerializeJsonObject(object jsonObject)
     {
-        var jsonObject = new
-        {
-            schema_version = "1.0.0",
-            header = new
-            {
-                kid = kekId,                    // The id of the KEK
-                alg = "dir",
-                enc = "CKM_RSA_AES_KEY_WRAP"
-            },
-            ciphertext = Base64UrlEncoder.Encode(cipherText),
-            generator = "BYOK v1.0; Azure Key Vault"
-        };
-
         return JsonSerializer.Serialize(jsonObject, new JsonSerializerOptions { WriteIndented = true });
     }
+    public KeyTransferBlob CreateKeyTransferBlob(byte[] cipherText, string kekId)
+    {
+        var keyTransferBlob = new KeyTransferBlob
+        {
+            SchemaVersion = "1.0.0",
+            Header = new HeaderObjects
+            {
+                Kid = kekId, // The id of the KEK
+                Alg = "dir",
+                Enc = "CKM_RSA_AES_KEY_WRAP"
+            },
+            Ciphertext = Base64UrlEncoder.Encode(cipherText),
+            Generator = "BYOK v1.0; Azure Key Vault"
+        };
 
-    public string CreateBodyForRequest(string transferBlob)
+        return keyTransferBlob;
+    }
+
+    public string CreateBodyForRequest(KeyTransferBlob transferBlob)
     {
         // Encode the transfer blob in bytes
-        byte[] bytes = Encoding.UTF8.GetBytes(transferBlob);
+        string serializedKeyTransferBlob = SerializeJsonObject(transferBlob);
+        byte[] bytes = Encoding.UTF8.GetBytes(serializedKeyTransferBlob);
         string transferBlobBase64Encoded = Convert.ToBase64String(bytes);
         
         // Create the json object
         // The key part of the object follows the JsonWebKey structure as specified by "https://learn.microsoft.com/en-us/azure/key-vault/keys/byok-specification" 
+        // NOTE: Consider introducing class for the JWK
         var jsonObject = new
         {
             key = new
