@@ -22,10 +22,10 @@ public class TestKeyVaultService
     public async Task ShouldBePossibleToEncryptKeyWithKekAndUpload()
     {
         // Given a Key Encryption Key and transfer blob
-        var kekName = $"kek-{Guid.NewGuid()}";
+        var kekName = $"KEK-{Guid.NewGuid()}";
         var kek = _keyVaultService.GenerateKek(kekName).Value;
         var transferBlob = _hsm.SimulateHsm(kek);
-        var newKeyName = $"customer-key-{Guid.NewGuid()}";
+        var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
         
         // When is ask to upload it
         var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlob, kek.Id.ToString());

@@ -6,6 +6,8 @@ public interface ITokenService
 {
     public KeyTransferBlob CreateKeyTransferBlob(byte[] cipherText, string kekId);
 
-    public string CreateBodyForRequest(KeyTransferBlob transferBlob);
+    public UploadKeyRequestBody CreateBodyForRequest(KeyTransferBlob transferBlob);
+    
+    public string SerializeJsonObject<T>(T jsonObject);
 
 }

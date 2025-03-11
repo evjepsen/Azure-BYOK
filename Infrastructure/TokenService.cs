@@ -9,9 +9,13 @@ namespace Infrastructure;
 
 public class TokenService : ITokenService
 {
-    private string SerializeJsonObject(object jsonObject)
+    public string SerializeJsonObject<T>(T jsonObject)
     {
-        return JsonSerializer.Serialize(jsonObject, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(jsonObject, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+        });
     }
     
     public KeyTransferBlob CreateKeyTransferBlob(byte[] cipherText, string kekId)
@@ -32,7 +36,7 @@ public class TokenService : ITokenService
         return keyTransferBlob;
     }
 
-    public string CreateBodyForRequest(KeyTransferBlob transferBlob)
+    public UploadKeyRequestBody CreateBodyForRequest(KeyTransferBlob transferBlob)
     {
         // Encode the transfer blob in bytes
         string serializedKeyTransferBlob = SerializeJsonObject(transferBlob);
@@ -42,23 +46,20 @@ public class TokenService : ITokenService
         // Create the json object
         // The key part of the object follows the JsonWebKey structure as specified by "https://learn.microsoft.com/en-us/azure/key-vault/keys/byok-specification" 
         // NOTE: Consider introducing class for the JWK
-        var jsonObject = new
+        UploadKeyRequestBody keyRequestBody = new UploadKeyRequestBody
         {
-            key = new
+            Key = new CustomJwk
             {
-               kty = "RSA-HSM",
-               key_ops = new [] {
-                   "decrypt",
-                   "encrypt",
-               },
-               key_hsm = transferBlobBase64Encoded 
+                Kty = "RSA-HSM",
+                KeyOps = ["decrypt", "encrypt"],
+                KeyHsm = transferBlobBase64Encoded
             },
-            attributes = new
+            Attributes = new CustomJwkAttributes
             {
-                enabled = true
+                Enabled = true
             }
         };
-
-        return JsonSerializer.Serialize(jsonObject, new JsonSerializerOptions { WriteIndented = true });
+        
+        return keyRequestBody;
     }
 }

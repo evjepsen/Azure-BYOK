@@ -45,10 +45,11 @@ public class KeyVaultService : IKeyVaultService
         
         // (Manually) Set up the JsonWebKey
         var requestBody = _tokenService.CreateBodyForRequest(transferBlob);
+        var requestBodyAsJson = _tokenService.SerializeJsonObject(requestBody);
         
         string url = $"{Environment.GetEnvironmentVariable("VAULT_URI")}/keys/{name}/import?api-version=7.4";
         
-        var content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+        var content = new StringContent(requestBodyAsJson, Encoding.UTF8, "application/json");
         
         // Add the authentication token
         var authorizationToken = await _tokenCredential.GetTokenAsync(
