@@ -14,7 +14,8 @@ public class TestKeyVaultService
     public void Setup()
     {
         _tokenService = new TokenService();
-        _keyVaultService = new KeyVaultService(_tokenService);
+        IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
+        _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory);
         _hsm = new FakeHsm();
     }
 

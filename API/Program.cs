@@ -16,6 +16,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IKeyVaultService, KeyVaultService>();
 
 // Add environment variables to Environment.GetEnvironmentVariable() function
+builder.Services.AddHttpClient();
 builder.Configuration.AddDotNetEnv(".env", LoadOptions.TraversePath());
 
 var app = builder.Build();

@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Net.Http.Headers;
 using System.Text;
 using Azure;
@@ -13,13 +12,13 @@ public class KeyVaultService : IKeyVaultService
 {
     private readonly KeyClient _client;
     private readonly ITokenService _tokenService;
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly TokenCredential _tokenCredential;
     private readonly string[] _scopes;
 
-    public KeyVaultService(ITokenService tokenService)
+    public KeyVaultService(ITokenService tokenService, IHttpClientFactory httpClientFactory)
     {
-        _httpClient = new HttpClient();
+        _httpClientFactory = httpClientFactory;
         _tokenService = tokenService;
         // Credentials for authentication
         _tokenCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
@@ -40,6 +39,7 @@ public class KeyVaultService : IKeyVaultService
 
     public async Task<string> UploadKey(string name, byte[] encryptedData, string kekId)
     {
+        var httpClient = _httpClientFactory.CreateClient();
         // Create the BYOK Blob for upload
         var transferBlob = _tokenService.CreateKeyTransferBlob(encryptedData, kekId);
         
@@ -57,11 +57,11 @@ public class KeyVaultService : IKeyVaultService
             default
         );
         
-        _httpClient.DefaultRequestHeaders.Authorization =
+        httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", authorizationToken.Token);
         
         // Send request
-        var response = await _httpClient.PostAsync(url, content);
+        var response = await httpClient.PostAsync(url, content);
         var responseContent = await response.Content.ReadAsStringAsync();
         
         if (!response.IsSuccessStatusCode)
