@@ -17,7 +17,6 @@ public class KeyVaultController : Controller
     public IActionResult CreateKeyEncryptionKey(string kekName)
     {
         var kek = _keyVaultService.GenerateKek(kekName);
-        
         return Ok(kek.Value);
     }
     
@@ -25,7 +24,6 @@ public class KeyVaultController : Controller
     public IActionResult ImportTdeKey(string name, byte[] byokJson, string kekId)
     {
         var kek = _keyVaultService.UploadKey(name, byokJson, kekId);
-        
         return Ok(kek);
     }
     

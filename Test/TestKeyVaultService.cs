@@ -13,6 +13,7 @@ public class TestKeyVaultService
     [SetUp]
     public void Setup()
     {
+        TestHelper.LoadEnvVariables();
         _tokenService = new TokenService();
         _keyVaultService = new KeyVaultService(_tokenService);
         _hsm = new FakeHsm();

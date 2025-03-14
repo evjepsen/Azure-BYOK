@@ -1,9 +1,7 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using Infrastructure;
 using Infrastructure.Interfaces;
-using Infrastructure.Models;
 using Microsoft.IdentityModel.Tokens;
+using Test.TestHelpers;
 
 namespace Test;
 
@@ -14,6 +12,7 @@ public class TestTokenService
     [SetUp]
     public void Setup()
     {
+        TestHelper.LoadEnvVariables();
         _tokenService = new TokenService();
     }
     

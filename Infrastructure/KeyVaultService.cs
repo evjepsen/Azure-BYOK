@@ -5,6 +5,7 @@ using Azure;
 using Azure.Core;
 using Azure.Identity;
 using Azure.Security.KeyVault.Keys;
+using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
 
 namespace Infrastructure;
@@ -30,7 +31,7 @@ public class KeyVaultService : IKeyVaultService
         
         // the azure key vault client
         _client = new KeyClient(
-            new Uri(Environment.GetEnvironmentVariable("VAULT_URI") ?? throw new InvalidOperationException("No Vault URI set")),
+            new Uri(Environment.GetEnvironmentVariable("VAULT_URI") ?? throw new EnvironmentVariableNotSetException("No Vault URI set")),
             _tokenCredential);
         
         // Scope for Azure Key Vault and the credentials

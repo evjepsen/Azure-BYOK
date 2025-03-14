@@ -1,3 +1,5 @@
+using Test.TestHelpers;
+
 namespace Test;
 
 public class TestEnvVars
@@ -5,7 +7,7 @@ public class TestEnvVars
     [SetUp]
     public void Setup()
     {
-        DotNetEnv.Env.TraversePath().Load();
+        TestHelper.LoadEnvVariables();
     }
 
     [Test]
