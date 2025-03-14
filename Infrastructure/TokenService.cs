@@ -2,22 +2,13 @@ using System.Text;
 using Infrastructure.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 using System.Text.Json;
-using System.Text.Json.Nodes;
+using Infrastructure.Helpers;
 using Infrastructure.Models;
 
 namespace Infrastructure;
 
 public class TokenService : ITokenService
 {
-    public string SerializeJsonObject<T>(T jsonObject)
-    {
-        return JsonSerializer.Serialize(jsonObject, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-        });
-    }
-    
     public KeyTransferBlob CreateKeyTransferBlob(byte[] cipherText, string kekId)
     {
         var keyTransferBlob = new KeyTransferBlob
@@ -39,7 +30,7 @@ public class TokenService : ITokenService
     public UploadKeyRequestBody CreateBodyForRequest(KeyTransferBlob transferBlob)
     {
         // Encode the transfer blob in bytes
-        string serializedKeyTransferBlob = SerializeJsonObject(transferBlob);
+        string serializedKeyTransferBlob = TokenHelper.SerializeJsonObject(transferBlob);
         byte[] bytes = Encoding.UTF8.GetBytes(serializedKeyTransferBlob);
         string transferBlobBase64Encoded = Convert.ToBase64String(bytes);
         

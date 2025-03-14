@@ -8,6 +8,4 @@ public interface ITokenService
 
     public UploadKeyRequestBody CreateBodyForRequest(KeyTransferBlob transferBlob);
     
-    public string SerializeJsonObject<T>(T jsonObject);
-
 }

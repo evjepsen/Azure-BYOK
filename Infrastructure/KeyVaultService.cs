@@ -4,6 +4,7 @@ using Azure;
 using Azure.Core;
 using Azure.Identity;
 using Azure.Security.KeyVault.Keys;
+using Infrastructure.Helpers;
 using Infrastructure.Interfaces;
 
 namespace Infrastructure;
@@ -45,7 +46,7 @@ public class KeyVaultService : IKeyVaultService
         
         // (Manually) Set up the JsonWebKey
         var requestBody = _tokenService.CreateBodyForRequest(transferBlob);
-        var requestBodyAsJson = _tokenService.SerializeJsonObject(requestBody);
+        var requestBodyAsJson = TokenHelper.SerializeJsonObject(requestBody);
         
         string url = $"{Environment.GetEnvironmentVariable("VAULT_URI")}/keys/{name}/import?api-version=7.4";
         
