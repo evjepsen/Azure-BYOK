@@ -1,10 +1,10 @@
-using System.Collections;
 using System.Net.Http.Headers;
 using System.Text;
 using Azure;
 using Azure.Core;
 using Azure.Identity;
 using Azure.Security.KeyVault.Keys;
+using Infrastructure.Helpers;
 using Infrastructure.Interfaces;
 
 namespace Infrastructure;
@@ -13,13 +13,13 @@ public class KeyVaultService : IKeyVaultService
 {
     private readonly KeyClient _client;
     private readonly ITokenService _tokenService;
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly TokenCredential _tokenCredential;
     private readonly string[] _scopes;
 
-    public KeyVaultService(ITokenService tokenService)
+    public KeyVaultService(ITokenService tokenService, IHttpClientFactory httpClientFactory)
     {
-        _httpClient = new HttpClient();
+        _httpClientFactory = httpClientFactory;
         _tokenService = tokenService;
         // Credentials for authentication
         _tokenCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
@@ -40,15 +40,17 @@ public class KeyVaultService : IKeyVaultService
 
     public async Task<string> UploadKey(string name, byte[] encryptedData, string kekId)
     {
+        var httpClient = _httpClientFactory.CreateClient();
         // Create the BYOK Blob for upload
         var transferBlob = _tokenService.CreateKeyTransferBlob(encryptedData, kekId);
         
         // (Manually) Set up the JsonWebKey
         var requestBody = _tokenService.CreateBodyForRequest(transferBlob);
+        var requestBodyAsJson = TokenHelper.SerializeJsonObject(requestBody);
         
         string url = $"{Environment.GetEnvironmentVariable("VAULT_URI")}/keys/{name}/import?api-version=7.4";
         
-        var content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+        var content = new StringContent(requestBodyAsJson, Encoding.UTF8, "application/json");
         
         // Add the authentication token
         var authorizationToken = await _tokenCredential.GetTokenAsync(
@@ -56,11 +58,11 @@ public class KeyVaultService : IKeyVaultService
             default
         );
         
-        _httpClient.DefaultRequestHeaders.Authorization =
+        httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", authorizationToken.Token);
         
         // Send request
-        var response = await _httpClient.PostAsync(url, content);
+        var response = await httpClient.PostAsync(url, content);
         var responseContent = await response.Content.ReadAsStringAsync();
         
         if (!response.IsSuccessStatusCode)
