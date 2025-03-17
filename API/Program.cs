@@ -1,7 +1,10 @@
+using System.Reflection;
 using DotNetEnv;
 using DotNetEnv.Configuration;
 using Infrastructure;
 using Infrastructure.Interfaces;
+using Microsoft.OpenApi.Models;
+using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,14 +12,29 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Version = "v1",
+        Title = "Azure BYOK API",
+        Description = "An ASP.NET Core Web API to enable BYOK for Azure Key Vault"
+    });
+    
+    var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
+});
 
 // Add the Services defined in infrastructure
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IKeyVaultService, KeyVaultService>();
 
 // Add environment variables to Environment.GetEnvironmentVariable() function
-builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("WaitAndRetry")
+    .AddTransientHttpErrorPolicy(policyBuilder =>
+        policyBuilder.WaitAndRetryAsync(
+            3, retryNumber => TimeSpan.FromMilliseconds(600)));
+
 builder.Configuration.AddDotNetEnv(".env", LoadOptions.TraversePath());
 
 var app = builder.Build();

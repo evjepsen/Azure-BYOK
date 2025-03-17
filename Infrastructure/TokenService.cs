@@ -1,7 +1,6 @@
 using System.Text;
 using Infrastructure.Interfaces;
 using Microsoft.IdentityModel.Tokens;
-using System.Text.Json;
 using Infrastructure.Helpers;
 using Infrastructure.Models;
 

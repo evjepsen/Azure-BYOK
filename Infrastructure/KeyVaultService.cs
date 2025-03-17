@@ -67,7 +67,7 @@ public class KeyVaultService : IKeyVaultService
         
         if (!response.IsSuccessStatusCode)
         {
-            throw new Exception($"Failed to import key: {response.StatusCode} - {responseContent}");
+            throw new HttpRequestException($"Failed to import key: {response.StatusCode} - {responseContent}");
         }
         
         return responseContent;
