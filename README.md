@@ -14,14 +14,19 @@ az login
 ### Set environment variables
 You have to setup the following enviroment variables:
 
-- `VAULT_URI` 
+- `VAULT_URI`
 
-They are read from the `.env` file using [dotnet-env](https://github.com/tonerdo/dotnet-env), so you have create one in the root of the project.
+They are read from the appsettings.azure.json, so you have create one in the `API` directory
 
-Example ´.env´ file:
+Example ´appsettings.azure.json´ file:
 
-```sh 
-VAULT_URI="https://xxxxx.vault.azure.net/"
+```json
+{
+  "VAULT_URI" : "https://xxx.vault.azure.net/",
+  "SUBSCRIPTION_ID" : "x",
+  "RESOURCE_GROUP_NAME" : "x",
+  "KV_RESOURCE_NAME" : "x"
+}
 ```
 
 

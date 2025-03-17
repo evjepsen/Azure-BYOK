@@ -13,6 +13,8 @@
         <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.1" />
         <PackageReference Include="coverlet.collector" Version="6.0.0"/>
         <PackageReference Include="DotNetEnv" Version="3.1.1" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0-preview.1.25080.5" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0-preview.1.25080.5" />
         <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.3" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0"/>
         <PackageReference Include="NUnit" Version="3.14.0"/>
@@ -26,6 +28,13 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="testConfiguration.json" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+    <ItemGroup>
+        <Content Include="..\API\appsettings.azure.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>

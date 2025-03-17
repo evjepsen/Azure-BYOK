@@ -1,12 +1,12 @@
 using System.Reflection;
-using DotNetEnv;
-using DotNetEnv.Configuration;
 using Infrastructure;
 using Infrastructure.Interfaces;
 using Microsoft.OpenApi.Models;
 using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -35,7 +35,11 @@ builder.Services.AddHttpClient("WaitAndRetry")
         policyBuilder.WaitAndRetryAsync(
             3, retryNumber => TimeSpan.FromMilliseconds(600)));
 
-builder.Configuration.AddDotNetEnv(".env", LoadOptions.TraversePath());
+builder.Configuration
+    .AddJsonFile("appsettings.json", true, true)
+    .AddJsonFile("appsettings.azure.json", false, true)
+    .AddEnvironmentVariables()
+    .Build();
 
 var app = builder.Build();
 
