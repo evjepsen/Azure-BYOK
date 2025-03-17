@@ -25,11 +25,7 @@ public class KeyVaultService : IKeyVaultService
         _tokenService = tokenService;
         _configuration = configuration;
         // Credentials for authentication
-        _tokenCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
-        {
-            // Exclude ManagedIdentityCredential when running locally
-            ManagedIdentityClientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID")
-        });
+        _tokenCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions{});
         
         // the azure key vault client
         _client = new KeyClient(

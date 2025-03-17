@@ -6,8 +6,6 @@ using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddControllers();
@@ -28,15 +26,15 @@ builder.Services.AddSwaggerGen(options =>
 // Add the Services defined in infrastructure
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IKeyVaultService, KeyVaultService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 
-// Add environment variables to Environment.GetEnvironmentVariable() function
 builder.Services.AddHttpClient("WaitAndRetry")
     .AddTransientHttpErrorPolicy(policyBuilder =>
         policyBuilder.WaitAndRetryAsync(
             3, retryNumber => TimeSpan.FromMilliseconds(600)));
 
+// Add environment variables
 builder.Configuration
-    .AddJsonFile("appsettings.json", true, true)
     .AddJsonFile("appsettings.azure.json", false, true)
     .AddEnvironmentVariables()
     .Build();

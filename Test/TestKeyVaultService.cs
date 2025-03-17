@@ -17,9 +17,7 @@ public class TestKeyVaultService
     {
         _tokenService = new TokenService();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
-        var builder = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.azure.json", false, true);
-        _configuration = builder.Build();
+        _configuration = TestHelper.LoadEnvVariables();
         _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory,_configuration);
         _hsm = new FakeHsm();
     }
