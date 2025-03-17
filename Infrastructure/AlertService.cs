@@ -32,8 +32,7 @@ public class AlertService : IAlertService
         _subscriptionIdentifier = new ResourceIdentifier($"/subscriptions/{_subscriptionId}");
     }
 
-    public async Task<ScheduledQueryRuleResource> CreateAlertForKeyAsync(string keyIdentifier,
-        IEnumerable<string> actionGroups)
+    public async Task<ScheduledQueryRuleResource> CreateAlertForKeyAsync(string alertName, string keyIdentifier, IEnumerable<string> actionGroups)
     {
         // Create the query
         var query = $"AzureDiagnostics | where OperationName startswith \"key\" | where id_s has \"{keyIdentifier}\"";
@@ -64,7 +63,7 @@ public class AlertService : IAlertService
         var alert = new ScheduledQueryRuleData(AzureLocation.NorthEurope)
         {
             Actions = alertAction,
-            DisplayName = "BYOKAlert",
+            DisplayName = alertName,
             Description = $"Alert for BYOK key: {keyIdentifier}",
             IsEnabled = true,
             Severity = 1,
@@ -80,7 +79,7 @@ public class AlertService : IAlertService
         var alertRules = resourceGroup.Value.GetScheduledQueryRules();
         var newAlertOperation = await alertRules.CreateOrUpdateAsync(
             WaitUntil.Completed,
-            "BYOKAlert",
+            alertName,
             alert);
         
         // Wait for it to be added
@@ -137,6 +136,14 @@ public class AlertService : IAlertService
         }
         
         return newActionGroup.Value;
+    }
+
+    public async Task<ActionGroupResource> GetActionGroup(string actionGroupName)
+    {
+        var subscription = _armClient.GetSubscriptionResource(_subscriptionIdentifier);
+        var resourceGroup = await subscription.GetResourceGroupAsync("BYOK");
         
+        var actionGroup = await resourceGroup.Value.GetActionGroupAsync(actionGroupName);
+        return actionGroup;
     }
 }
