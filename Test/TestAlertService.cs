@@ -31,4 +31,22 @@ public class TestAlertService
         // Then it should be added
         Assert.True(actionGroup.HasData);
     }
+
+    [Test]
+    public async Task ShouldCreateAlertForKey()
+    {
+        // Given an alert service and an action group
+        var emailReceiver = new EmailReceiver
+        {
+            Name = "John Doe",
+            Email = "john.doe@apple.com"
+        };
+        var emailReceivers = new List<EmailReceiver>{emailReceiver};
+        var actionGroup = await _alertService.CreateActionGroup("test", emailReceivers);
+        IEnumerable<string> actionGroups = [actionGroup.Data.Name];
+        // When I ask to add an alert
+        var alert = await _alertService.CreateAlertForKeyAsync("kek", actionGroups);
+        // Then it should be there
+        Assert.True(alert.HasData);
+    }
 }
