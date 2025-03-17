@@ -1,7 +1,6 @@
 namespace Infrastructure.Models;
 
 //  A proper Key Tranfer Blob according to the specification:
-//  https://learn.microsoft.com/en-us/azure/key-vault/keys/byok-specification#key-transfer-blob
 //  {
 //   "schema_version": "1.0.0",
 //   "header":

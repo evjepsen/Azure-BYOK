@@ -1,7 +1,6 @@
 namespace Infrastructure.Models;
 
 // A proper request body when importing an RSA key:
-// https://learn.microsoft.com/en-us/azure/key-vault/keys/byok-specification#key-transfer-blob
 // {
 //   "key": {
 //     "kty": "RSA-HSM",
