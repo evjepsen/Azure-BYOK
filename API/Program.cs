@@ -29,6 +29,7 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IKeyVaultService, KeyVaultService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IAlertService, AlertService>();
 
 // Add environment variables to Environment.GetEnvironmentVariable() function
 builder.Services.AddHttpClient("WaitAndRetry")

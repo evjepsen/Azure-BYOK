@@ -93,7 +93,7 @@ public class AlertService : IAlertService
         return newAlert.Value;
     }
 
-    public async Task<ActionGroupResource> CreateActionGroup(string name, IEnumerable<EmailReceiver> emails)
+    public async Task<ActionGroupResource> CreateActionGroupAsync(string name, IEnumerable<EmailReceiver> emails)
     {
         // Get the subscription
         var subscription = _armClient.GetSubscriptionResource(_subscriptionIdentifier);
@@ -138,7 +138,7 @@ public class AlertService : IAlertService
         return newActionGroup.Value;
     }
 
-    public async Task<ActionGroupResource> GetActionGroup(string actionGroupName)
+    public async Task<ActionGroupResource> GetActionGroupAsync(string actionGroupName)
     {
         var subscription = _armClient.GetSubscriptionResource(_subscriptionIdentifier);
         var resourceGroup = await subscription.GetResourceGroupAsync("BYOK");

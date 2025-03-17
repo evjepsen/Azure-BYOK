@@ -28,7 +28,7 @@ public class TestAlertService
         };
         var emailReceivers = new List<EmailReceiver> { emailReceiver };
         // When I ask to add an Action group
-        var actionGroup = await _alertService.CreateActionGroup("test", emailReceivers);
+        var actionGroup = await _alertService.CreateActionGroupAsync("test", emailReceivers);
         
         // Then it should be added
         Assert.True(actionGroup.HasData);
@@ -52,10 +52,10 @@ public class TestAlertService
             Email = "john.doe@apple.com"
         };
         var emailReceivers = new List<EmailReceiver> { emailReceiver };
-        await _alertService.CreateActionGroup("test", emailReceivers);
+        await _alertService.CreateActionGroupAsync("test", emailReceivers);
         
         // When I ask to get it
-        var actionGroup = await _alertService.GetActionGroup("test");
+        var actionGroup = await _alertService.GetActionGroupAsync("test");
         // Then it should be there
         Assert.True(actionGroup.HasData);
         Assert.That(actionGroup.Data.Name, Is.EqualTo("test"));
@@ -76,7 +76,7 @@ public class TestAlertService
             Email = "john.doe@apple.com"
         };
         var emailReceivers = new List<EmailReceiver>{emailReceiver};
-        var actionGroup = await _alertService.CreateActionGroup("test", emailReceivers);
+        var actionGroup = await _alertService.CreateActionGroupAsync("test", emailReceivers);
         IEnumerable<string> actionGroups = [actionGroup.Data.Name];
         
         // When I ask to add an alert
