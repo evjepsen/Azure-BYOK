@@ -10,7 +10,7 @@ public class TestEnvVars
     [SetUp]
     public void Setup()
     {
-        _configuration = TestHelper.LoadEnvVariables();
+        _configuration = TestHelper.CreateTestConfiguration();
     }
 
     [Test]

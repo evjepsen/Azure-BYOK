@@ -15,10 +15,10 @@ public class TestKeyVaultService
     [SetUp]
     public void Setup()
     {
-        TestHelper.LoadEnvVariables();
+        TestHelper.CreateTestConfiguration();
         _tokenService = new TokenService();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
-        _configuration = TestHelper.LoadEnvVariables();
+        _configuration = TestHelper.CreateTestConfiguration();
         _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory,_configuration);
         _hsm = new FakeHsm();
     }

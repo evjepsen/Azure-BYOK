@@ -4,7 +4,7 @@ namespace Test.TestHelpers;
 
 public static class TestHelper
 {
-    public static IConfigurationRoot LoadEnvVariables()
+    public static IConfiguration CreateTestConfiguration()
     {
         var builder = new ConfigurationBuilder()
             .AddJsonFile("appsettings.azure.json", false, true);
