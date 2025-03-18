@@ -7,6 +7,7 @@ using Azure.ResourceManager.Monitor.Models;
 using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
 using Infrastructure.Models;
+using Microsoft.Extensions.Configuration;
 
 namespace Infrastructure;
 
@@ -17,16 +18,18 @@ public class AlertService : IAlertService
     private readonly string _subscriptionId;
     private readonly string _resourceGroupName;
     private readonly string _keyVaultResource;
+    private readonly IConfiguration _configuration; 
 
-    public AlertService()
+    public AlertService(IConfiguration configuration)
     {
         TokenCredential credential = new DefaultAzureCredential();
         _armClient = new ArmClient(credential);
+        _configuration = configuration;
         
         // Save the id's needed
-        _subscriptionId = Environment.GetEnvironmentVariable("SUBSCRIPTION_ID") ?? throw new EnvironmentVariableNotSetException("The Subscription Id was not set");
-        _resourceGroupName = Environment.GetEnvironmentVariable("RESOURCE_GROUP_NAME") ?? throw new EnvironmentVariableNotSetException("The Resource Group Name was not set");
-        _keyVaultResource = Environment.GetEnvironmentVariable("RESOURCE") ?? throw new EnvironmentVariableNotSetException("The Resource Name was not set");
+        _subscriptionId =    _configuration["SUBSCRIPTION_ID"] ?? throw new EnvironmentVariableNotSetException("The Subscription Id was not set");
+        _resourceGroupName = _configuration["RESOURCE_GROUP_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Group Name was not set");
+        _keyVaultResource =  _configuration["KV_RESOURCE_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Name was not set");
         
         // Setup the resourceId
         _subscriptionIdentifier = new ResourceIdentifier($"/subscriptions/{_subscriptionId}");
@@ -75,7 +78,7 @@ public class AlertService : IAlertService
         
         // Add the new alert
         var subscription = _armClient.GetSubscriptionResource(_subscriptionIdentifier);
-        var resourceGroup = await subscription.GetResourceGroupAsync("BYOK");
+        var resourceGroup = await subscription.GetResourceGroupAsync(_resourceGroupName);
         var alertRules = resourceGroup.Value.GetScheduledQueryRules();
         var newAlertOperation = await alertRules.CreateOrUpdateAsync(
             WaitUntil.Completed,
@@ -99,7 +102,7 @@ public class AlertService : IAlertService
         var subscription = _armClient.GetSubscriptionResource(_subscriptionIdentifier);
         
         // Get the resource group with the key vault
-        var resourceGroup = await subscription.GetResourceGroupAsync("BYOK");
+        var resourceGroup = await subscription.GetResourceGroupAsync(_resourceGroupName);
 
         if (!resourceGroup.HasValue)
         {
@@ -141,7 +144,7 @@ public class AlertService : IAlertService
     public async Task<ActionGroupResource> GetActionGroupAsync(string actionGroupName)
     {
         var subscription = _armClient.GetSubscriptionResource(_subscriptionIdentifier);
-        var resourceGroup = await subscription.GetResourceGroupAsync("BYOK");
+        var resourceGroup = await subscription.GetResourceGroupAsync(_resourceGroupName);
         
         var actionGroup = await resourceGroup.Value.GetActionGroupAsync(actionGroupName);
         return actionGroup;
