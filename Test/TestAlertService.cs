@@ -13,8 +13,8 @@ public class TestAlertService
     [SetUp]
     public void Setup()
     {
-        TestHelper.LoadEnvVariables();
-        _alertService = new AlertService();
+        var testConfiguration = TestHelper.CreateTestConfiguration();
+        _alertService = new AlertService(testConfiguration);
     }
 
     [Test]
