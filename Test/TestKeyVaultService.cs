@@ -1,5 +1,6 @@
 using Infrastructure;
 using Infrastructure.Interfaces;
+using Microsoft.Extensions.Configuration;
 using Test.TestHelpers;
 
 namespace Test;
@@ -8,14 +9,16 @@ public class TestKeyVaultService
 {
     private ITokenService _tokenService;
     private IKeyVaultService _keyVaultService;
+    private IConfiguration _configuration; 
     
     [SetUp]
     public void Setup()
     {
-        TestHelper.LoadEnvVariables();
+        TestHelper.CreateTestConfiguration();
         _tokenService = new TokenService();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
-        _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory);
+        _configuration = TestHelper.CreateTestConfiguration();
+        _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory,_configuration);
     }
 
     [Test]

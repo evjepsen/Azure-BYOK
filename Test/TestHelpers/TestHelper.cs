@@ -1,9 +1,14 @@
+using Microsoft.Extensions.Configuration;
+
 namespace Test.TestHelpers;
 
 public static class TestHelper
 {
-    public static void LoadEnvVariables()
+    public static IConfiguration CreateTestConfiguration()
     {
-        DotNetEnv.Env.TraversePath().Load();
+        var builder = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.azure.json", false, true);
+        var res = builder.Build();
+        return res;
     }
 }

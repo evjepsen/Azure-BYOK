@@ -7,6 +7,7 @@ using Azure.Identity;
 using Azure.Security.KeyVault.Keys;
 using Infrastructure.Helpers;
 using Infrastructure.Interfaces;
+using Microsoft.Extensions.Configuration;
 using Infrastructure.Models;
 
 namespace Infrastructure;
@@ -18,21 +19,19 @@ public class KeyVaultService : IKeyVaultService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly TokenCredential _tokenCredential;
     private readonly string[] _scopes;
+    private readonly IConfiguration _configuration; 
 
-    public KeyVaultService(ITokenService tokenService, IHttpClientFactory httpClientFactory)
+    public KeyVaultService(ITokenService tokenService, IHttpClientFactory httpClientFactory, IConfiguration configuration)
     {
         _httpClientFactory = httpClientFactory;
         _tokenService = tokenService;
+        _configuration = configuration;
         // Credentials for authentication
-        _tokenCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
-        {
-            // Exclude ManagedIdentityCredential when running locally
-            ManagedIdentityClientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID")
-        });
+        _tokenCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions{});
         
         // the azure key vault client
         _client = new KeyClient(
-            new Uri(Environment.GetEnvironmentVariable("VAULT_URI") ?? throw new InvalidOperationException("No Vault URI set")),
+            new Uri( _configuration["VAULT_URI"]?? throw new InvalidOperationException("No Vault URI set")),
             _tokenCredential);
         
         // Scope for Azure Key Vault and the credentials
@@ -50,7 +49,7 @@ public class KeyVaultService : IKeyVaultService
         var requestBody = _tokenService.CreateBodyForRequest(transferBlob);
         var requestBodyAsJson = TokenHelper.SerializeJsonObject(requestBody);
         
-        string url = $"{Environment.GetEnvironmentVariable("VAULT_URI")}/keys/{name}/import?api-version=7.4";
+        string url = $"{_configuration["VAULT_URI"]}/keys/{name}/import?api-version=7.4";
         
         var content = new StringContent(requestBodyAsJson, Encoding.UTF8, "application/json");
         
