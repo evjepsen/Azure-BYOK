@@ -1,8 +1,8 @@
+using API.Models;
 using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
-
 
 /// <summary>
 /// Controller to interact with the Azure Key Vault
@@ -11,14 +11,17 @@ namespace API.Controllers;
 public class KeyVaultController : Controller
 {
     private readonly IKeyVaultService _keyVaultService;
-    
+    private readonly IAlertService _alertService;
+
     /// <summary>
     /// The constructor for the controller
     /// </summary>
     /// <param name="keyVaultService">The key vault service used to interact with the Azure Key Vault</param>
-    public KeyVaultController(IKeyVaultService keyVaultService)
+    /// <param name="alertService">The alert service used to interact with the Azure Alert System</param>
+    public KeyVaultController(IKeyVaultService keyVaultService, IAlertService alertService)
     {
         _keyVaultService = keyVaultService;
+        _alertService = alertService;
     }
     
     /// <summary>
@@ -33,20 +36,49 @@ public class KeyVaultController : Controller
         
         return Ok(kek.Value);
     }
-    
+
     /// <summary>
     /// Endpoint used to import (into Azure) a user specified encrypted key
     /// </summary>
-    /// <param name="name">Name of the encrypted key</param>
-    /// <param name="encryptedKey">The key to upload in encrypted format</param>
-    /// <param name="kekId">The id of the key encryption key used to encrypt the user specified key</param>
-    /// <returns>When succesful the public part of the user specified key</returns>
-    [HttpPost("{name}/{encryptedKey}/{kekId}")]
-    public IActionResult ImportUserSpecifiedKey(string name, byte[] encryptedKey, string kekId)
+    /// <param name="request">The key import request</param>
+    /// <returns>When successful the public part of the user specified key</returns>
+    [HttpPost]
+    public async Task<IActionResult> ImportUserSpecifiedKey([FromBody] ImportKeyRequest request)
     {
-        var kek = _keyVaultService.UploadKey(name, encryptedKey, kekId);
+        // There must be at least one Action Group
+        if (!request.ActionGroups.Any())
+        {
+            return BadRequest("Missing an Action Group");
+        }
         
-        return Ok(kek);
+        // Each of them have to exist
+        foreach (var actionGroupName in request.ActionGroups)
+        {
+            var actionGroup = await _alertService.GetActionGroupAsync(actionGroupName);
+            if (!actionGroup.HasData)
+            {
+                return BadRequest($"The action group {actionGroupName} does not exist");
+            }
+        }
+        
+        // Extract the encrypted key
+        byte[] encryptedKey;
+        try
+        {
+            encryptedKey = Convert.FromBase64String(request.EncryptedKeyBase64);
+        }
+        catch (FormatException)
+        {
+            return BadRequest("Invalid base64 format for EncryptedKeyBase64");
+        }
+        
+        // Upload the key to Azure
+        var response = await _keyVaultService.UploadKey(request.Name, encryptedKey, request.KeyEncryptionKeyId);
+        
+        // Create an alert for the new key
+        await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid, request.ActionGroups);
+        
+        return Ok(response);
     }
     
 }

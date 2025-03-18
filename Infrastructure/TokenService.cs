@@ -29,9 +29,9 @@ public class TokenService : ITokenService
     public UploadKeyRequestBody CreateBodyForRequest(KeyTransferBlob transferBlob)
     {
         // Encode the transfer blob in bytes
-        string serializedKeyTransferBlob = TokenHelper.SerializeJsonObject(transferBlob);
-        byte[] bytes = Encoding.UTF8.GetBytes(serializedKeyTransferBlob);
-        string transferBlobBase64Encoded = Convert.ToBase64String(bytes);
+        var serializedKeyTransferBlob = TokenHelper.SerializeJsonObject(transferBlob);
+        var bytes = Encoding.UTF8.GetBytes(serializedKeyTransferBlob);
+        var transferBlobBase64Encoded = Convert.ToBase64String(bytes);
         
         // Create the json object
         // The key part of the object follows the JsonWebKey structure as specified by "https://learn.microsoft.com/en-us/azure/key-vault/keys/byok-specification" 

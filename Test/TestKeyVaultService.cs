@@ -8,7 +8,6 @@ public class TestKeyVaultService
 {
     private ITokenService _tokenService;
     private IKeyVaultService _keyVaultService;
-    private FakeHsm _hsm;
     
     [SetUp]
     public void Setup()
@@ -17,7 +16,6 @@ public class TestKeyVaultService
         _tokenService = new TokenService();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
         _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory);
-        _hsm = new FakeHsm();
     }
 
     [Test]
@@ -26,13 +24,13 @@ public class TestKeyVaultService
         // Given a Key Encryption Key and transfer blob
         var kekName = $"KEK-{Guid.NewGuid()}";
         var kek = _keyVaultService.GenerateKek(kekName).Value;
-        var transferBlob = _hsm.SimulateHsm(kek);
+        var transferBlob = FakeHsm.SimulateHsm(kek);
         var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
         
         // When is ask to upload it
         var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlob, kek.Id.ToString());
         
         // Then it should be successful
-        Assert.True(kvRes.Contains("key"));
+        Assert.That(kvRes.Attributes.Enabled, Is.True);
     } 
 }

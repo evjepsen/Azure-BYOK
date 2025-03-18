@@ -1,5 +1,6 @@
 using Azure;
 using Azure.Security.KeyVault.Keys;
+using Infrastructure.Models;
 
 namespace Infrastructure.Interfaces;
 
@@ -15,7 +16,7 @@ public interface IKeyVaultService
     /// <param name="encryptedData">The BYOK TDE protector encrypted under KEK</param>
     /// <param name="kekId">Key identifier of the KEK used</param>
     /// <returns>The public information of the Azure Key Vault key that has been uploaded</returns>
-    public Task<string> UploadKey(string name, byte[] encryptedData, string kekId);
+    public Task<KeyVaultUploadKeyResponse> UploadKey(string name, byte[] encryptedData, string kekId);
 
     /// <summary>
     /// Generate a Key Encryption Key (KEK) to protect the customer's TDE protector
