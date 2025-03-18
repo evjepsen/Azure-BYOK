@@ -12,4 +12,13 @@ public static class TokenHelper
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         });
     }
+
+    public static T? DeserializeJsonObject<T>(string content)
+    {
+        return JsonSerializer.Deserialize<T>(content, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+        });
+}
 }

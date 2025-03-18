@@ -6,15 +6,15 @@ using Org.BouncyCastle.Crypto.Engines;
 
 namespace Test.TestHelpers;
 
-public class FakeHsm
+public static class FakeHsm
 {
-    private byte[] CreateTestKey()
+    private static byte[] CreateTestKey()
     {
         using var rsa = RSA.Create(2048);
         return rsa.ExportPkcs8PrivateKey();
     }
 
-    public byte[] SimulateHsm(KeyVaultKey kek)
+    public static byte[] SimulateHsm(KeyVaultKey kek)
     {
         // Generate the customer's key 
         var testKeyBytes = CreateTestKey();
@@ -46,17 +46,17 @@ public class FakeHsm
             cs.FlushFinalBlock();
         }
             
-        byte[] encryptedKeyMaterial = AesKeyWrapWithPadding(testKeyBytes, aesKey);
+        var encryptedKeyMaterial = AesKeyWrapWithPadding(testKeyBytes, aesKey);
         
         // The Aes key and key material (both encrypted) are concatenated to produce the ciphertext
-        byte[] ciphertext = new byte[encryptedAesKey.Length + encryptedKeyMaterial.Length];
+        var ciphertext = new byte[encryptedAesKey.Length + encryptedKeyMaterial.Length];
         Buffer.BlockCopy(encryptedAesKey, 0, ciphertext, 0, encryptedAesKey.Length);
         Buffer.BlockCopy(encryptedKeyMaterial, 0, ciphertext, encryptedAesKey.Length, encryptedKeyMaterial.Length);
         
         return ciphertext;
     }
 
-    private byte[] AesKeyWrapWithPadding(byte[] keyToWrap, byte[] aesKey)
+    private static byte[] AesKeyWrapWithPadding(byte[] keyToWrap, byte[] aesKey)
     {
         IWrapper wrapper = new AesWrapPadEngine();
         wrapper.Init(true, new KeyParameter(aesKey));

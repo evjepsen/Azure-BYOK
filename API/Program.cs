@@ -27,6 +27,7 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IKeyVaultService, KeyVaultService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IAlertService, AlertService>();
 
 builder.Services.AddHttpClient("WaitAndRetry")
     .AddTransientHttpErrorPolicy(policyBuilder =>

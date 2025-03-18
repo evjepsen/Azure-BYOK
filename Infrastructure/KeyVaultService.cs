@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using Azure;
 using Azure.Core;
 using Azure.Identity;
@@ -7,6 +8,7 @@ using Azure.Security.KeyVault.Keys;
 using Infrastructure.Helpers;
 using Infrastructure.Interfaces;
 using Microsoft.Extensions.Configuration;
+using Infrastructure.Models;
 
 namespace Infrastructure;
 
@@ -37,7 +39,7 @@ public class KeyVaultService : IKeyVaultService
     }
 
 
-    public async Task<string> UploadKey(string name, byte[] encryptedData, string kekId)
+    public async Task<KeyVaultUploadKeyResponse> UploadKey(string name, byte[] encryptedData, string kekId)
     {
         var httpClient = _httpClientFactory.CreateClient();
         // Create the BYOK Blob for upload
@@ -69,7 +71,15 @@ public class KeyVaultService : IKeyVaultService
             throw new HttpRequestException($"Failed to import key: {response.StatusCode} - {responseContent}");
         }
         
-        return responseContent;
+        // Deserialize into an object
+        var responseObject = TokenHelper.DeserializeJsonObject<KeyVaultUploadKeyResponse>(responseContent);
+
+        if (responseObject is null)
+        {
+            throw new JsonException("Could not deserialize the response from Azure");
+        }
+
+        return responseObject;
     }
 
     // Use RSA-HSM as Key Encryption Key
