@@ -21,13 +21,6 @@ public class UploadKeyRequestBody
     public required CustomJwkAttributes Attributes { get; init; }
 }
 
-public class CustomJwk
-{
-    public required string Kty { get; init; }
-    public required string[] KeyOps { get; init; }
-    public required string KeyHsm { get; init; }
-}
-
 public class CustomJwkAttributes
 {
     public required bool Enabled { get; init; }
