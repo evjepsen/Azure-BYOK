@@ -12,7 +12,7 @@ public class TestTokenService
     [SetUp]
     public void Setup()
     {
-        TestHelper.LoadEnvVariables();
+        TestHelper.CreateTestConfiguration();
         _tokenService = new TokenService();
     }
     

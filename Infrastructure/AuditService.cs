@@ -6,21 +6,21 @@ using Azure.Monitor.Query;
 using Azure.Monitor.Query.Models;
 using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
+using Microsoft.Extensions.Configuration;
 
 namespace Infrastructure;
 
 public class AuditService : IAuditService
 {
     private readonly LogsQueryClient _client;
+    private readonly IConfiguration _configuration; 
 
-    public AuditService()
+    public AuditService(IConfiguration configuration)
     {
+        _configuration = configuration; 
+        
         // Setup credentials for access
-        var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
-        {
-            // Exclude ManagedIdentityCredential when running locally
-            ManagedIdentityClientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID")
-        });        
+        var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions{});        
         
         // Create a LogQueryClient that can perform log queries
         _client = new LogsQueryClient(credential);
@@ -42,12 +42,12 @@ public class AuditService : IAuditService
 
     private async Task<string> GetLogs(int numOfDays, string query)
     {
-        var subscriptionId = Environment.GetEnvironmentVariable("SUBSCRIPTION_ID") ?? throw new EnvironmentVariableNotSetException("The Subscription Id was not set");
-        var resourceGroupName = Environment.GetEnvironmentVariable("RESOURCE_GROUP_NAME") ?? throw new EnvironmentVariableNotSetException("The Resource Group Name was not set");
-        var resource = Environment.GetEnvironmentVariable("RESOURCE") ?? throw new EnvironmentVariableNotSetException("The Resource Name was not set");
+        var subscriptionId =  _configuration["SUBSCRIPTION_ID"] ?? throw new EnvironmentVariableNotSetException("The Subscription Id was not set");
+        var resourceGroupName = _configuration["RESOURCE_GROUP_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Group Name was not set");
+        var keyVaultResource = _configuration["KV_RESOURCE_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Name was not set");
         
         // Setup the resourceId
-        var resourceId = $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.KeyVault/vaults/{resource}";
+        var resourceId = $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.KeyVault/vaults/{keyVaultResource}";
         
         // Run the query to get all the key operations performed
         // Todo: Add proper error handling

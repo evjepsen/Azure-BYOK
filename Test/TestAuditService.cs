@@ -11,8 +11,8 @@ public class TestAuditService
     [SetUp]
     public void Setup()
     {
-        TestHelper.LoadEnvVariables();
-        _auditService = new AuditService();
+        var config = TestHelper.CreateTestConfiguration();
+        _auditService = new AuditService(config);
     }
 
     [Test]

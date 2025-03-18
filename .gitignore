@@ -14,7 +14,9 @@
 *.userosscache
 *.sln.docstates
 
+# environment variables
 .env
+API/appsettings.azure.json
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

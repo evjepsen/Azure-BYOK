@@ -1,6 +1,4 @@
 using System.Reflection;
-using DotNetEnv;
-using DotNetEnv.Configuration;
 using Infrastructure;
 using Infrastructure.Interfaces;
 using Microsoft.OpenApi.Models;
@@ -30,13 +28,16 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IKeyVaultService, KeyVaultService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 
-// Add environment variables to Environment.GetEnvironmentVariable() function
 builder.Services.AddHttpClient("WaitAndRetry")
     .AddTransientHttpErrorPolicy(policyBuilder =>
         policyBuilder.WaitAndRetryAsync(
             3, retryNumber => TimeSpan.FromMilliseconds(600)));
 
-builder.Configuration.AddDotNetEnv(".env", LoadOptions.TraversePath());
+// Add environment variables
+builder.Configuration
+    .AddJsonFile("appsettings.azure.json", false, true)
+    .AddEnvironmentVariables()
+    .Build();
 
 var app = builder.Build();
 
