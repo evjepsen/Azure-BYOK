@@ -19,6 +19,20 @@ public interface IAlertService
         IEnumerable<string> actionGroups);
 
     /// <summary>
+    /// Creates an alert that monitors administrative actions
+    /// </summary>
+    /// <param name="alertName">The name of the alert</param>
+    /// <param name="actionGroups">The action groups that should be alerted on changes</param>
+    /// <returns>The created alert</returns>
+    public Task<ActivityLogAlertResource> CreateAlertForKeyVaultAsync(string alertName, IEnumerable<string> actionGroups);
+
+    /// <summary>
+    /// Check whether there exists an alert for activity happening on the key vault
+    /// </summary>
+    /// <returns>A boolean denoting whether such an alert exists</returns>
+    public Task<bool> CheckForKeyVaultAlert();
+
+    /// <summary>
     /// Creates a new action group
     /// </summary>
     /// <param name="name">Name of the new action group</param>

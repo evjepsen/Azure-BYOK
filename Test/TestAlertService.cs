@@ -88,7 +88,7 @@ public class TestAlertService
         Assert.That(alert.Data.Name, Is.EqualTo("ByokAlert"));
         Assert.That(alert.Data.WindowSize, Is.EqualTo(TimeSpan.FromMinutes(10)));
         Assert.That(alert.Data.EvaluationFrequency, Is.EqualTo(TimeSpan.FromMinutes(5)));
-        Assert.True(alert.Data.IsEnabled);
+        Assert.That(alert.Data.IsEnabled, Is.True);
         Assert.That(alert.Data.Scopes[0].Contains("Microsoft.KeyVault/vaults"), Is.True);
         Assert.That(alert.Data.Actions.ActionGroups[0].Contains($"providers/microsoft.insights/actionGroups/{actionGroup.Data.Name}"));
 
@@ -102,4 +102,37 @@ public class TestAlertService
         Assert.That(condition.FailingPeriods.MinFailingPeriodsToAlert, Is.EqualTo(1));
         Assert.That(condition.ResourceIdColumn, Is.EqualTo("ResourceId"));
     }
+
+    [Test]
+    public async Task ShouldBePossibleToCreateAnAlertForTheKeyVault()
+    {
+        // Given an alert service and an action group
+        var emailReceiver = new EmailReceiver
+        {
+            Name = "John Doe",
+            Email = "john.doe@apple.com"
+        };
+        var emailReceivers = new List<EmailReceiver>{emailReceiver};
+        var actionGroup = await _alertService.CreateActionGroupAsync("test", emailReceivers);
+        IEnumerable<string> actionGroups = [actionGroup.Data.Name];
+        
+        // When I ask to add a log activity alert
+        var alert = await _alertService.CreateAlertForKeyVaultAsync("ByokKvAlert", actionGroups);
+        // Then it should be added
+        Assert.That(alert.HasData, Is.True);
+        
+        // And have the correct attributes 
+        Assert.That(alert.Data.IsEnabled, Is.True);
+        Assert.That(alert.Data.Scopes, Has.Count.EqualTo(1));
+        Assert.That(alert.Data.Scopes[0], Does.Contain("Microsoft.KeyVault/vaults"));
+        
+        // And the correct conditions
+        Assert.That(alert.Data.ConditionAllOf[0].Field, Is.EqualTo("category"));
+        Assert.That(alert.Data.ConditionAllOf[0].EqualsValue, Is.EqualTo("Administrative"));
+        Assert.That(alert.Data.ConditionAllOf[1].AnyOf[0].Field, Is.EqualTo("resourceType"));
+        Assert.That(alert.Data.ConditionAllOf[1].AnyOf[1].Field, Is.EqualTo("resourceType"));
+        Assert.That(alert.Data.ConditionAllOf[1].AnyOf[0].EqualsValue, Is.EqualTo("Microsoft.KeyVault/vaults"));
+        Assert.That(alert.Data.ConditionAllOf[1].AnyOf[1].EqualsValue, Is.EqualTo("Microsoft.Authorization/roleAssignments"));
+    }
+    
 }
