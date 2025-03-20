@@ -1,3 +1,4 @@
+using Azure.Security.KeyVault.Keys;
 using Infrastructure;
 using Infrastructure.Interfaces;
 using Microsoft.Extensions.Configuration;
@@ -22,11 +23,27 @@ public class TestKeyVaultService
     }
 
     [Test]
+    public async Task ShouldBePossibleToCreateAKek()
+    {
+        // Given a key vault service
+        // When I ask to create a key encryption key
+        var kekName = $"KEK-{Guid.NewGuid()}";
+        var kek = await _keyVaultService.GenerateKekAsync(kekName);
+        // Then it should be created and have the correct attributes
+        Assert.That(kek.KeyOperations, Has.Count.EqualTo(1));
+        Assert.That(kek.KeyOperations, Does.Contain(KeyOperation.Import));
+        Assert.That(kek.KeyType, Is.EqualTo(KeyType.RsaHsm));
+        Assert.That(kek.Properties.Enabled, Is.True);
+        Assert.That(kek.Properties.Exportable, Is.False);
+        Assert.That(kek.Properties.ExpiresOn, Is.LessThanOrEqualTo(DateTimeOffset.Now.AddHours(12)));
+    }
+
+    [Test]
     public async Task ShouldBePossibleToEncryptKeyWithKekAndUpload()
     {
         // Given a Key Encryption Key and transfer blob
         var kekName = $"KEK-{Guid.NewGuid()}";
-        var kek = _keyVaultService.GenerateKek(kekName).Value;
+        var kek = await _keyVaultService.GenerateKekAsync(kekName);
         var transferBlob = FakeHsm.SimulateHsm(kek);
         var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
         

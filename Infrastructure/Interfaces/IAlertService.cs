@@ -30,7 +30,7 @@ public interface IAlertService
     /// Check whether there exists an alert for activity happening on the key vault
     /// </summary>
     /// <returns>A boolean denoting whether such an alert exists</returns>
-    public Task<bool> CheckForKeyVaultAlert();
+    public Task<bool> CheckForKeyVaultAlertAsync();
 
     /// <summary>
     /// Creates a new action group

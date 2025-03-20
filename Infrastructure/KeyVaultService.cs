@@ -83,7 +83,7 @@ public class KeyVaultService : IKeyVaultService
     }
 
     // Use RSA-HSM as Key Encryption Key
-    public Response<KeyVaultKey> GenerateKek(string name)
+    public async Task<KeyVaultKey> GenerateKekAsync(string name)
     {
         var keyOptions = new CreateRsaKeyOptions(name, true)
         {
@@ -94,7 +94,14 @@ public class KeyVaultService : IKeyVaultService
             KeySize = 2048                                                          // Key size of 2048 bits 
         };
 
-        return _client.CreateRsaKey(keyOptions);
+        var kek = await _client.CreateRsaKeyAsync(keyOptions);
+
+        if (!kek.HasValue)
+        {
+            throw new HttpRequestException("Failed to create key encryption key");
+        }
+
+        return kek.Value;
     }
     
 }

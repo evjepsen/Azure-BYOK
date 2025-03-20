@@ -30,11 +30,11 @@ public class KeyVaultController : Controller
     /// <param name="kekName">Name of the key encryption key</param>
     /// <returns>The public part of the key encryption key (To be used to encrypt the user chosen key)</returns>
     [HttpGet("{kekName}")]
-    public IActionResult CreateKeyEncryptionKey(string kekName)
+    public async Task<IActionResult> CreateKeyEncryptionKey(string kekName)
     {
-        var kek = _keyVaultService.GenerateKek(kekName);
+        var kek = await _keyVaultService.GenerateKekAsync(kekName);
         
-        return Ok(kek.Value);
+        return Ok(kek);
     }
 
     /// <summary>
@@ -45,6 +45,14 @@ public class KeyVaultController : Controller
     [HttpPost]
     public async Task<IActionResult> ImportUserSpecifiedKey([FromBody] ImportKeyRequest request)
     {
+        // There must be an alert for key vault usage setup
+        var isThereAKeyVaultAlert = await _alertService.CheckForKeyVaultAlertAsync();
+
+        if (!isThereAKeyVaultAlert)
+        {
+            return BadRequest("Missing a key vault alert");
+        }
+        
         // There must be at least one Action Group
         if (!request.ActionGroups.Any())
         {
@@ -76,7 +84,7 @@ public class KeyVaultController : Controller
         var response = await _keyVaultService.UploadKey(request.Name, encryptedKey, request.KeyEncryptionKeyId);
         
         // Create an alert for the new key
-        await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid, request.ActionGroups);
+        await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid!, request.ActionGroups);
         
         return Ok(response);
     }

@@ -134,5 +134,25 @@ public class TestAlertService
         Assert.That(alert.Data.ConditionAllOf[1].AnyOf[0].EqualsValue, Is.EqualTo("Microsoft.KeyVault/vaults"));
         Assert.That(alert.Data.ConditionAllOf[1].AnyOf[1].EqualsValue, Is.EqualTo("Microsoft.Authorization/roleAssignments"));
     }
+
+    [Test]
+    public async Task ShouldThereExistAnAlertForTheKeyVault()
+    {
+        // Given that there has been set up an alert on the key vault
+        var emailReceiver = new EmailReceiver
+        {
+            Name = "John Doe",
+            Email = "john.doe@apple.com"
+        };
+        var emailReceivers = new List<EmailReceiver>{emailReceiver};
+        var actionGroup = await _alertService.CreateActionGroupAsync("test", emailReceivers);
+        IEnumerable<string> actionGroups = [actionGroup.Data.Name];
+        
+        await _alertService.CreateAlertForKeyVaultAsync("ByokKvAlert", actionGroups);
+        // When I ask whether one exists
+        var doesAlertExist = await _alertService.CheckForKeyVaultAlertAsync();
+        // Then it should
+        Assert.That(doesAlertExist, Is.True);
+    }
     
 }

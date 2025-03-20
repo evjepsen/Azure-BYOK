@@ -23,7 +23,7 @@ public interface IKeyVaultService
     /// </summary>
     /// <param name="name">Name of the new KEK</param>
     /// <returns>The KEK as an Azure Key Vault Key</returns>
-    public Response<KeyVaultKey> GenerateKek(string name);
+    public Task<KeyVaultKey> GenerateKekAsync(string name);
     
     
     
