@@ -35,5 +35,23 @@ public class TestKeyVaultService
         
         // Then it should be successful
         Assert.That(kvRes.Attributes.Enabled, Is.True);
-    } 
+    }
+
+    [Test]
+    public async Task ShouldBePossibleToGetPublicKeyOfKekAsPem()
+    {
+        // Given a Key Encryption Key and transfer blob
+        var kekId = $"KEK-{Guid.NewGuid()}";
+        var kek = _keyVaultService.GenerateKek(kekId).Value;
+        var transferBlob = FakeHsm.SimulateHsm(kek);
+        var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
+        // where the key is uploaded
+        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlob, kek.Id.ToString());
+        
+        var wantPem = kek.Key.ToRSA().ExportRSAPublicKeyPem();
+        var gotPem = await _keyVaultService.DownloadPublicKekAsPem(kekId);
+        // Then it should be successful
+        Assert.That(gotPem.PemString, Is.EqualTo(wantPem));
+        
+    }
 }

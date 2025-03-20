@@ -83,6 +83,13 @@ public class KeyVaultService : IKeyVaultService
     }
 
     // Use RSA-HSM as Key Encryption Key
+    // TODO: implement support for more key types
+    // proposal to signature:
+    // `public Response<KeyVaultKey> GenerateKek(string name, KeyType keyType)`
+    
+    // Cannot set the KeyType as a default parameter: RSA-HSM is not
+    // possible, since KeyType is not a compile-time constant
+    // Cannot switch on the type either
     public Response<KeyVaultKey> GenerateKek(string name)
     {
         var keyOptions = new CreateRsaKeyOptions(name, true)
@@ -93,8 +100,30 @@ public class KeyVaultService : IKeyVaultService
             KeyOperations = { KeyOperation.Import },                                // Can only be used to import the TDE Protector
             KeySize = 2048                                                          // Key size of 2048 bits 
         };
-
-        return _client.CreateRsaKey(keyOptions);
+      return _client.CreateRsaKey(keyOptions);
     }
-    
+
+    public async Task<PublicKeyKekPem> DownloadPublicKekAsPem(string kekid)
+    {
+        // SDK Reference: https://learn.microsoft.com/en-us/dotnet/api/azure.security.keyvault.keys.keyclient.getkeyasync?view=azure-dotnet
+
+        try
+        {
+            // Get the key associated with the KEK ID
+            var res = await _client.GetKeyAsync(kekid);
+
+            var key = res.Value.Key;
+            var pem = key.ToRSA().ExportRSAPublicKeyPem();
+            return new PublicKeyKekPem{PemString = pem};
+        }
+        catch (RequestFailedException)
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            throw new Exception($"\"DownloadPublicKekAsPem\" failed, encountered the exception: {e.Message}");
+        }
+
+    }
 }
