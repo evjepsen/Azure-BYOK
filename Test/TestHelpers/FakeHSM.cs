@@ -8,7 +8,7 @@ namespace Test.TestHelpers;
 
 public static class FakeHsm
 {
-    private static byte[] CreateTestKey()
+    private static byte[] CreatePrivateTestKey()
     {
         using var rsa = RSA.Create(2048);
         return rsa.ExportPkcs8PrivateKey();
@@ -16,11 +16,11 @@ public static class FakeHsm
 
     public static byte[] SimulateHsm(KeyVaultKey kek)
     {
-        // Generate the customer's key 
-        var testKeyBytes = CreateTestKey();
+        // Generate the customer's private key 
+        var testKeyBytes = CreatePrivateTestKey();
         
-        // Change the kek to a key that can be used 
-        var cryptoClient = kek.Key.ToRSA();
+        // Convert the KEK to an RSA object
+        var rsa = kek.Key.ToRSA();
         
         // Generate the AES key
         using var aesProvider = Aes.Create();
@@ -29,7 +29,7 @@ public static class FakeHsm
         var aesKey = aesProvider.Key;
 
         // Encrypt the AES key using the KEK using RSA-OAEP with SHA1
-        var encryptedAesKey = cryptoClient.Encrypt(aesKey, RSAEncryptionPadding.OaepSHA1);
+        var encryptedAesKey = rsa.Encrypt(aesKey, RSAEncryptionPadding.OaepSHA1);
         
         // The plaintext (Customer's key) is encrypted using the AES key using AES Key Wrap with padding
         aesProvider.Mode = CipherMode.CFB;

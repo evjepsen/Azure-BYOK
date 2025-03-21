@@ -83,7 +83,7 @@ public class KeyVaultService : IKeyVaultService
     }
 
     // Use RSA-HSM as Key Encryption Key
-    public Response<KeyVaultKey> GenerateKek(string name)
+    public async Task<KeyVaultKey> GenerateKek(string name)
     {
         var keyOptions = new CreateRsaKeyOptions(name, true)
         {
@@ -93,8 +93,21 @@ public class KeyVaultService : IKeyVaultService
             KeyOperations = { KeyOperation.Import },                                // Can only be used to import the TDE Protector
             KeySize = 2048                                                          // Key size of 2048 bits 
         };
-
-        return _client.CreateRsaKey(keyOptions);
+      return await _client.CreateRsaKeyAsync(keyOptions);
     }
-    
+
+    public async Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekId)
+    {
+        // Get the key associated with the KEK ID
+        var res = await _client.GetKeyAsync(kekId);
+
+        if (!res.HasValue)
+        {
+            throw new HttpRequestException("Failed to get the key");
+        }
+        
+        var key = res.Value.Key;
+        var pem = key.ToRSA().ExportRSAPublicKeyPem();
+        return new PublicKeyKekPem{PemString = pem};
+    }
 }
