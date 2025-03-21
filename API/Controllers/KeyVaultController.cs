@@ -1,4 +1,5 @@
 using API.Models;
+using Azure.ResourceManager.Monitor;
 using Azure;
 using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -31,9 +32,9 @@ public class KeyVaultController : Controller
     /// <param name="kekName">Name of the key encryption key</param>
     /// <returns>The public part of the key encryption key (To be used to encrypt the user chosen key)</returns>
     [HttpGet("create/{kekName}")]
-    public IActionResult CreateKeyEncryptionKey(string kekName)
+    public async Task<IActionResult> CreateKeyEncryptionKey(string kekName)
     {
-        var kek = _keyVaultService.GenerateKek(kekName);
+        var kek = await _keyVaultService.GenerateKekAsync(kekName);
         
         return Ok(kek);
     }
@@ -42,10 +43,21 @@ public class KeyVaultController : Controller
     /// Endpoint used to import (into Azure) a user specified encrypted key
     /// </summary>
     /// <param name="request">The key import request</param>
-    /// <returns>When successful the public part of the user specified key</returns>
+    /// <response code="200">Returns the public part of the user specified key</response>
+    /// <response code="400">If the request is invalid</response>
+    /// <response code="404">If the key encryption key or action groups used don't exist</response>
+    /// <response code="500">If there was an internal server error</response>
     [HttpPost]
     public async Task<IActionResult> ImportUserSpecifiedKey([FromBody] ImportKeyRequest request)
     {
+        // There must be an alert for key vault usage setup
+        var isThereAKeyVaultAlert = await _alertService.CheckForKeyVaultAlertAsync();
+
+        if (!isThereAKeyVaultAlert)
+        {
+            return BadRequest("Missing a key vault alert");
+        }
+        
         // There must be at least one Action Group
         if (!request.ActionGroups.Any())
         {
@@ -55,10 +67,21 @@ public class KeyVaultController : Controller
         // Each of them have to exist
         foreach (var actionGroupName in request.ActionGroups)
         {
-            var actionGroup = await _alertService.GetActionGroupAsync(actionGroupName);
-            if (!actionGroup.HasData)
+            try
             {
-                return BadRequest($"The action group {actionGroupName} does not exist");
+                var actionGroup = await _alertService.GetActionGroupAsync(actionGroupName);
+                if (!actionGroup.HasData)
+                {
+                    return BadRequest($"The action group {actionGroupName} does not exist");
+                }
+            }
+            catch (RequestFailedException e)
+            {
+                return StatusCode(e.Status, e.ErrorCode);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
             }
         }
         
@@ -73,11 +96,13 @@ public class KeyVaultController : Controller
             return BadRequest("Invalid base64 format for EncryptedKeyBase64");
         }
         
+        // TODO: ADD CHECK THAT KEY ENCRYPTION KEY EXISTS
+        
         // Upload the key to Azure
         var response = await _keyVaultService.UploadKey(request.Name, encryptedKey, request.KeyEncryptionKeyId);
         
         // Create an alert for the new key
-        await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid, request.ActionGroups);
+        await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid!, request.ActionGroups);
         
         return Ok(response);
     }
@@ -96,17 +121,16 @@ public class KeyVaultController : Controller
         try
         {
             var response = await _keyVaultService.DownloadPublicKekAsPemAsync(kekName);
-            var pem = response.PemString;
-            return Ok(pem);
+            return Ok(response.PemString);
         }
         // Handle expected exception
         catch (RequestFailedException e)
         {
             return StatusCode(e.Status,e.ErrorCode);
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, $"Request Failed with the error: {e.Message}");
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
         }
     }
     

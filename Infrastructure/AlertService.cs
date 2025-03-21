@@ -4,6 +4,7 @@ using Azure.Identity;
 using Azure.ResourceManager;
 using Azure.ResourceManager.Monitor;
 using Azure.ResourceManager.Monitor.Models;
+using Azure.ResourceManager.Resources;
 using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
 using Infrastructure.Models;
@@ -17,22 +18,23 @@ public class AlertService : IAlertService
     private readonly ResourceIdentifier _subscriptionIdentifier;
     private readonly string _subscriptionId;
     private readonly string _resourceGroupName;
-    private readonly string _keyVaultResource;
-    private readonly IConfiguration _configuration; 
+    private readonly string _keyVaultResourceId;
 
     public AlertService(IConfiguration configuration)
     {
         TokenCredential credential = new DefaultAzureCredential();
         _armClient = new ArmClient(credential);
-        _configuration = configuration;
-        
+
         // Save the id's needed
-        _subscriptionId =    _configuration["SUBSCRIPTION_ID"] ?? throw new EnvironmentVariableNotSetException("The Subscription Id was not set");
-        _resourceGroupName = _configuration["RESOURCE_GROUP_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Group Name was not set");
-        _keyVaultResource =  _configuration["KV_RESOURCE_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Name was not set");
+        _subscriptionId =    configuration["SUBSCRIPTION_ID"] ?? throw new EnvironmentVariableNotSetException("The Subscription Id was not set");
+        _resourceGroupName = configuration["RESOURCE_GROUP_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Group Name was not set");
+        var keyVaultResource = configuration["KV_RESOURCE_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Name was not set");
         
-        // Setup the resourceId
+        // Set up the resource id
+        _keyVaultResourceId = $"/subscriptions/{_subscriptionId}/resourceGroups/{_resourceGroupName}/providers/Microsoft.KeyVault/vaults/{keyVaultResource}";
+        // Set up the subscription id
         _subscriptionIdentifier = new ResourceIdentifier($"/subscriptions/{_subscriptionId}");
+
     }
 
     public async Task<ScheduledQueryRuleResource> CreateAlertForKeyAsync(string alertName, string keyIdentifier, IEnumerable<string> actionGroups)
@@ -71,15 +73,15 @@ public class AlertService : IAlertService
             IsEnabled = true,
             Severity = 1,
             WindowSize = TimeSpan.FromMinutes(10),
-            Scopes = { $"/subscriptions/{_subscriptionId}/resourceGroups/{_resourceGroupName}/providers/Microsoft.KeyVault/vaults/{_keyVaultResource}" },
+            Scopes = { _keyVaultResourceId },
             CriteriaAllOf = { alertConditions },
             EvaluationFrequency = TimeSpan.FromMinutes(5)
         };
         
         // Add the new alert
-        var subscription = _armClient.GetSubscriptionResource(_subscriptionIdentifier);
-        var resourceGroup = await subscription.GetResourceGroupAsync(_resourceGroupName);
-        var alertRules = resourceGroup.Value.GetScheduledQueryRules();
+        var resourceGroup = await GetResourceGroupAsync();
+        
+        var alertRules = resourceGroup.GetScheduledQueryRules();
         var newAlertOperation = await alertRules.CreateOrUpdateAsync(
             WaitUntil.Completed,
             alertName,
@@ -90,24 +92,131 @@ public class AlertService : IAlertService
 
         if (!newAlert.HasValue)
         {
-            throw new HttpRequestException("Could not add the new action group");
+            throw new HttpRequestException("Could not add the new log alert");
         }
 
         return newAlert.Value;
     }
 
+    public async Task<ActivityLogAlertResource> CreateAlertForKeyVaultAsync(string alertName, IEnumerable<string> actionGroups)
+    {
+        // Set up the conditions
+        var conditions = new List<ActivityLogAlertAnyOfOrLeafCondition>
+        {
+            // Get administrative actions
+            new()
+            {
+                Field = "category",
+                EqualsValue = "Administrative"
+            },
+            new()
+            {
+                AnyOf =
+                {
+                    // Get the actions performed on the key vault
+                    new AlertRuleLeafCondition
+                    {
+                        Field = "resourceType",
+                        EqualsValue = "Microsoft.KeyVault/vaults"
+                    },
+                    // Get the actions that updated roles 
+                    new AlertRuleLeafCondition
+                    {
+                        Field = "resourceType",
+                        EqualsValue = "Microsoft.Authorization/roleAssignments"  
+                    }
+                }
+            }
+        };
+        
+        // Create the alert
+        var alert = new ActivityLogAlertData("Global")
+        {
+            IsEnabled = true,
+            Scopes = { _keyVaultResourceId },
+            ConditionAllOf = conditions,
+            Description = "Ensure that changes to the Key Vault and corresponding role assignments are alerted"
+        };
+        
+        // Add the action groups to the new alert
+        foreach (var actionGroupName in actionGroups)
+        {
+            var actionGroupIdentifier = new ResourceIdentifier($"/subscriptions/{_subscriptionId}/resourceGroups/{_resourceGroupName}/providers/microsoft.insights/actionGroups/{actionGroupName}");
+            var actionGroup = new ActivityLogAlertActionGroup(actionGroupIdentifier);
+            alert.ActionsActionGroups.Add(actionGroup);
+        }
+        
+        // Add the new alert
+        var resourceGroup = await GetResourceGroupAsync();
+        var alertRules = resourceGroup.GetActivityLogAlerts();
+        var newAlertOperation = await alertRules.CreateOrUpdateAsync(
+            WaitUntil.Completed,
+            alertName,
+            alert
+        );
+        
+        // Wait for it to be added
+        var newAlert = await newAlertOperation.WaitForCompletionAsync();
+
+        if (!newAlert.HasValue)
+        {
+            throw new HttpRequestException("Could not add the new activity alert");
+        }
+
+        return newAlert.Value;
+        
+    }
+
+    public async Task<bool> CheckForKeyVaultAlertAsync()
+    {
+        // Get all the activity alerts
+        var resourceGroup = await GetResourceGroupAsync();
+        var alertRules = resourceGroup
+            .GetActivityLogAlerts()
+            .GetAllAsync();
+
+        // Check that at least one is for the key vault
+        var isThereKeyVaultAlert = false;
+        await foreach (var alert in alertRules)
+        {
+            if (!alert.HasData)
+            {
+                continue;
+            }
+            
+            var isEnabled = alert.Data.IsEnabled.HasValue && alert.Data.IsEnabled.Value;
+            var isForCorrectResource = alert.Data.Scopes.Contains(_keyVaultResourceId);
+            
+            // Check that it has the correct conditions
+            var hasAdministrativeCategory = alert
+                .Data
+                .ConditionAllOf
+                .Any(condition => condition.Field == "category" && condition.EqualsValue == "Administrative");
+            
+            var hasRequiredResourceType = alert
+                .Data
+                .ConditionAllOf
+                .Any(condition =>
+                {
+                    var isThereVaultCondition = condition.AnyOf.Any(leafCondition => leafCondition.Field == "resourceType" && leafCondition.EqualsValue == "Microsoft.KeyVault/vaults");
+                    var isThereAuthorizationCondition = condition.AnyOf.Any(leafCondition => leafCondition.Field == "resourceType" && leafCondition.EqualsValue == "Microsoft.Authorization/roleAssignments" );
+                    return isThereVaultCondition && isThereAuthorizationCondition;
+                });
+            
+            // We are satisfied when a proper alert has been found
+            isThereKeyVaultAlert = isEnabled && isForCorrectResource && hasAdministrativeCategory && hasRequiredResourceType;
+            if (isThereKeyVaultAlert)
+            {
+                return true;
+            } 
+        }
+
+        return isThereKeyVaultAlert;
+    }
+
     public async Task<ActionGroupResource> CreateActionGroupAsync(string name, IEnumerable<EmailReceiver> emails)
     {
-        // Get the subscription
-        var subscription = _armClient.GetSubscriptionResource(_subscriptionIdentifier);
-        
-        // Get the resource group with the key vault
-        var resourceGroup = await subscription.GetResourceGroupAsync(_resourceGroupName);
-
-        if (!resourceGroup.HasValue)
-        {
-            throw new HttpRequestException("Could not access the resource group");
-        }
+        var resourceGroup = await GetResourceGroupAsync();
         
         var actionGroupData = new ActionGroupData("Global")
         {
@@ -123,7 +232,7 @@ public class AlertService : IAlertService
         }
         
         // Add the action group    
-        var actionGroups = resourceGroup.Value.GetActionGroups();
+        var actionGroups = resourceGroup.GetActionGroups();
         var newActionGroupOperation = await actionGroups.CreateOrUpdateAsync(
             WaitUntil.Completed,
             name,
@@ -143,10 +252,29 @@ public class AlertService : IAlertService
 
     public async Task<ActionGroupResource> GetActionGroupAsync(string actionGroupName)
     {
-        var subscription = _armClient.GetSubscriptionResource(_subscriptionIdentifier);
-        var resourceGroup = await subscription.GetResourceGroupAsync(_resourceGroupName);
+        var resourceGroup = await GetResourceGroupAsync();
+        var actionGroup = await resourceGroup.GetActionGroupAsync(actionGroupName);
         
-        var actionGroup = await resourceGroup.Value.GetActionGroupAsync(actionGroupName);
-        return actionGroup;
+        if (!actionGroup.HasValue)
+        {
+            throw new HttpRequestException("Could not access the action groups");
+        }
+        
+        return actionGroup.Value;
+    }
+    
+    // Helper methods
+    private async Task<ResourceGroupResource> GetResourceGroupAsync()
+    {
+        var resourceGroup = await _armClient
+            .GetSubscriptionResource(_subscriptionIdentifier)
+            .GetResourceGroupAsync(_resourceGroupName);
+
+        if (!resourceGroup.HasValue)
+        {
+            throw new HttpRequestException("Could not access the resource group");
+        }
+
+        return resourceGroup.Value;
     }
 }
