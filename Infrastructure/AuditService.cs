@@ -68,14 +68,13 @@ public class AuditService : IAuditService
             new QueryTimeRange(TimeSpan.FromDays(numOfDays))
         );
 
-        if (result.Value.Status != 0)
+        if (!result.HasValue || result.Value.Status != 0)
         {
-            return $"An error occured when fetching the logs - {result.Value.Error}";
+            throw new HttpRequestException("The query did not return any results");
         }
         
-        var table = result.Value.Table;
-        
         // Translate the parsed records into json and then serialise the whole thing as a Json List
+        var table = result.Value.Table;
         var rows = new List<object?>();
         foreach (var row in table.Rows)
         {

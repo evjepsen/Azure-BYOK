@@ -1,7 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using Azure;
 using Azure.Core;
 using Azure.Identity;
 using Azure.Security.KeyVault.Keys;
@@ -41,7 +40,7 @@ public class KeyVaultService : IKeyVaultService
 
     public async Task<KeyVaultUploadKeyResponse> UploadKey(string name, byte[] encryptedData, string kekId)
     {
-        var httpClient = _httpClientFactory.CreateClient();
+        var httpClient = _httpClientFactory.CreateClient("WaitAndRetry");
         // Create the BYOK Blob for upload
         var transferBlob = _tokenService.CreateKeyTransferBlob(encryptedData, kekId);
         
