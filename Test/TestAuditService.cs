@@ -12,7 +12,8 @@ public class TestAuditService
     public void Setup()
     {
         var config = TestHelper.CreateTestConfiguration();
-        _auditService = new AuditService(config);
+        IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
+        _auditService = new AuditService(config, httpClientFactory);
     }
 
     [Test]

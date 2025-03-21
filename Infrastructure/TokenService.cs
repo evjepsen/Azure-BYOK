@@ -35,7 +35,7 @@ public class TokenService : ITokenService
         
         // Create the json object
         // The key part of the object follows the JsonWebKey structure as specified by "https://learn.microsoft.com/en-us/azure/key-vault/keys/byok-specification" 
-        UploadKeyRequestBody keyRequestBody = new UploadKeyRequestBody
+        var keyRequestBody = new UploadKeyRequestBody
         {
             Key = new CustomJwk
             {
