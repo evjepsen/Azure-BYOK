@@ -1,5 +1,6 @@
 using API.Models;
 using Azure.ResourceManager.Monitor;
+using Azure;
 using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -30,7 +31,7 @@ public class KeyVaultController : Controller
     /// </summary>
     /// <param name="kekName">Name of the key encryption key</param>
     /// <returns>The public part of the key encryption key (To be used to encrypt the user chosen key)</returns>
-    [HttpGet("{kekName}")]
+    [HttpGet("create/{kekName}")]
     public async Task<IActionResult> CreateKeyEncryptionKey(string kekName)
     {
         var kek = await _keyVaultService.GenerateKekAsync(kekName);
@@ -74,7 +75,7 @@ public class KeyVaultController : Controller
                     return BadRequest($"The action group {actionGroupName} does not exist");
                 }
             }
-            catch (Azure.RequestFailedException e)
+            catch (RequestFailedException e)
             {
                 return StatusCode(e.Status, e.ErrorCode);
             }
@@ -104,6 +105,33 @@ public class KeyVaultController : Controller
         await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid!, request.ActionGroups);
         
         return Ok(response);
+    }
+
+    /// <summary>
+    /// Endpoint to get the public key part of a Key Encryption Key (KEK) in PEM format
+    /// </summary>
+    /// <param name="kekName"></param>
+    /// <response code="200">Returns the public key of KEK in PEM format</response>
+    /// <response code="404">Key not found</response>
+    /// <response code="400">Bad request. See the error code for details</response>
+    /// <response code="500">Internal server error</response>
+    [HttpGet("{kekName}")]
+    public async Task<IActionResult> GetPublicKeyEncryptionKeyAsPem(string kekName)
+    {
+        try
+        {
+            var response = await _keyVaultService.DownloadPublicKekAsPemAsync(kekName);
+            return Ok(response.PemString);
+        }
+        // Handle expected exception
+        catch (RequestFailedException e)
+        {
+            return StatusCode(e.Status,e.ErrorCode);
+        }
+        catch (Exception)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
     }
     
 }

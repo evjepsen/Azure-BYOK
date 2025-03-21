@@ -52,5 +52,21 @@ public class TestKeyVaultService
         
         // Then it should be successful
         Assert.That(kvRes.Attributes.Enabled, Is.True);
-    } 
+    }
+
+    [Test]
+    public async Task ShouldBePossibleToGetPublicKeyOfKekAsPem()
+    {
+        // Given a Key Encryption Key
+        var kekId = $"KEK-{Guid.NewGuid()}";
+        var kek = await _keyVaultService.GenerateKekAsync(kekId);
+        
+        // When i ask to get the public key as PEM
+        var gotPem = await _keyVaultService.DownloadPublicKekAsPemAsync(kekId);
+        
+        // Then the PEM should be the same as the one we generated
+        var wantPem = kek.Key.ToRSA().ExportRSAPublicKeyPem();
+        Assert.That(gotPem.PemString, Is.EqualTo(wantPem));
+        
+    }
 }
