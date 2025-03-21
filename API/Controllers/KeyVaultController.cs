@@ -133,5 +133,62 @@ public class KeyVaultController : Controller
             return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
         }
     }
+
+    /// <summary>
+    /// Deletes a Key Encryption Key
+    /// </summary>
+    /// <param name="kekName"></param>
+    /// <response code="200">Key was deleted</response>
+    /// <response code="404">Key not found</response>
+    /// <response code="400">Bad request. See the error code for details</response>
+    /// <response code="500">Internal server error</response>
+    [HttpDelete("delete/{kekName}")]
+    public async Task<IActionResult> DeleteKeyEncryptionKey(string kekName)
+    {
+        try
+        {
+            var response = await _keyVaultService.DeleteKeyAsync(kekName); 
+            return Ok(response);
+        }
+        catch (RequestFailedException e)
+        {
+            return StatusCode(e.Status, e.ErrorCode);
+        }
+        catch (Exception)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+    }
+    
+    /// <summary>
+    /// Purge a deleted key
+    /// </summary>
+    /// <param name="kekName"></param>
+    /// <response code="204">Deleted Key was purged</response>
+    /// <response code="404">Key not found</response>
+    /// <response code="400">Bad request. See the error code for details</response>
+    /// <response code="500">Internal server error</response>
+    [HttpDelete("purgeDeletedKey/{kekName}")]
+    public async Task<IActionResult> PurgeDeletedKeyEncryptionKey(string kekName)
+    {
+        try
+        {
+            var response = await _keyVaultService.PurgeDeletedKeyAsync(kekName);
+            return StatusCode(response.Status);
+        }
+        catch (OperationCanceledException e)
+        {
+            return StatusCode(StatusCodes.Status408RequestTimeout, "The operation was timed out.");
+        }
+        catch (RequestFailedException e)
+        {
+            return StatusCode(e.Status, e.ErrorCode);
+        }
+        catch (Exception)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+    }
+    
     
 }
