@@ -26,7 +26,7 @@ public class TestKeyVaultService
     {
         // Given a Key Encryption Key and transfer blob
         var kekName = $"KEK-{Guid.NewGuid()}";
-        var kek = _keyVaultService.GenerateKek(kekName).Value;
+        var kek = await _keyVaultService.GenerateKek(kekName);
         var transferBlob = FakeHsm.SimulateHsm(kek);
         var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
         
@@ -40,17 +40,15 @@ public class TestKeyVaultService
     [Test]
     public async Task ShouldBePossibleToGetPublicKeyOfKekAsPem()
     {
-        // Given a Key Encryption Key and transfer blob
+        // Given a Key Encryption Key
         var kekId = $"KEK-{Guid.NewGuid()}";
-        var kek = _keyVaultService.GenerateKek(kekId).Value;
-        var transferBlob = FakeHsm.SimulateHsm(kek);
-        var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
-        // where the key is uploaded
-        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlob, kek.Id.ToString());
+        var kek = await _keyVaultService.GenerateKek(kekId);
         
+        // When is ask to get the public key as PEM
+        var gotPem = await _keyVaultService.DownloadPublicKekAsPemAsync(kekId);
+        
+        // Then the PEM should be the same as the one we generated
         var wantPem = kek.Key.ToRSA().ExportRSAPublicKeyPem();
-        var gotPem = await _keyVaultService.DownloadPublicKekAsPem(kekId);
-        // Then it should be successful
         Assert.That(gotPem.PemString, Is.EqualTo(wantPem));
         
     }

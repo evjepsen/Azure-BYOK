@@ -20,11 +20,10 @@ public interface IKeyVaultService
 
     /// <summary>
     /// Generate a Key Encryption Key (KEK) to protect the customer's TDE protector
-    /// Keytype= RSA-hsm
     /// </summary>
     /// <param name="name">Name of the new KEK</param>
     /// <returns>The KEK as an Azure Key Vault Key</returns>
-    public Response<KeyVaultKey> GenerateKek(string name);
+    public Task<KeyVaultKey> GenerateKek(string name);
 
 
     /// <summary>
@@ -32,8 +31,7 @@ public interface IKeyVaultService
     /// </summary>
     /// <param name="kekid">id of the KEK</param>
     /// <returns>A public key in pem format</returns>
-    // public Task<PublicKeyKekPem> DownloadPublicKekAsPem(string kekid);
-    public Task<PublicKeyKekPem> DownloadPublicKekAsPem(string kekid);
+    public Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekid);
     
     
     
