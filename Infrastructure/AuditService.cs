@@ -29,7 +29,7 @@ public class AuditService : IAuditService
     public async Task<string> GetKeyOperationsPerformedAsync(int numOfDays)
     {
         // Ensures that the result is given in JSON format
-        const string query = "AzureDiagnostics | where OperationName startswith \"key\" | extend PackedRecord = pack_all()\n| project PackedRecord";
+        const string query = "AzureDiagnostics | where OperationName startswith \"key\" | extend PackedRecord = pack_all() | project PackedRecord";
         return await GetLogs(numOfDays, query);
     }
     
@@ -37,6 +37,12 @@ public class AuditService : IAuditService
     {
         // Ensures that the result is given in JSON format
         const string query = "AzureDiagnostics | where OperationName startswith \"vault\" | extend PackedRecord = pack_all() | project PackedRecord"; 
+        return await GetLogs(numOfDays, query);
+    }
+
+    public async Task<string> GetKeyVaultActivityLogsAsync(int numOfDays)
+    {
+        const string query = "AzureActivity | extend PackedRecord = pack_all() | project PackedRecord"; 
         return await GetLogs(numOfDays, query);
     }
 
@@ -50,7 +56,6 @@ public class AuditService : IAuditService
         var resourceId = $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.KeyVault/vaults/{keyVaultResource}";
         
         // Run the query to get all the key operations performed
-        // Todo: Add proper error handling
         Response<LogsQueryResult> result = await _client.QueryResourceAsync(
             new ResourceIdentifier(resourceId), 
             query,            

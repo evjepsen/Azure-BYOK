@@ -35,4 +35,14 @@ public class TestAuditService
         // Then it should return a result
         Assert.That(result, Is.Not.Empty);
     } 
+    
+    [Test]
+    public async Task ShouldReturnLogsOfKeyVaultActivity()
+    {
+        // Given an Audit Service
+        // When I ask for the key vault operations performed in the last 24 hours
+        var result = await _auditService.GetKeyVaultActivityLogsAsync(1);
+        // Then it should return a result
+        Assert.That(result, Is.Not.Empty);
+    }
 }
