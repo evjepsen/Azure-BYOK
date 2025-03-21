@@ -29,9 +29,9 @@ public interface IKeyVaultService
     /// <summary>
     /// Download public key of the KEK in PEM format
     /// </summary>
-    /// <param name="kekid">id of the KEK</param>
+    /// <param name="kekId">id of the KEK</param>
     /// <returns>A public key in pem format</returns>
-    public Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekid);
+    public Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekId);
     
     
     

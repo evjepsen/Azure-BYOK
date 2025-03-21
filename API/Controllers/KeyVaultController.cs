@@ -106,7 +106,7 @@ public class KeyVaultController : Controller
         }
         catch (Exception e)
         {
-            return BadRequest($"Request Failed with the error code: {e}");
+            return StatusCode(StatusCodes.Status500InternalServerError, $"Request Failed with the error: {e.Message}");
         }
     }
     

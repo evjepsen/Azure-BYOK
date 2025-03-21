@@ -96,11 +96,16 @@ public class KeyVaultService : IKeyVaultService
       return await _client.CreateRsaKeyAsync(keyOptions);
     }
 
-    public async Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekid)
+    public async Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekId)
     {
         // Get the key associated with the KEK ID
-        var res = await _client.GetKeyAsync(kekid);
+        var res = await _client.GetKeyAsync(kekId);
 
+        if (!res.HasValue)
+        {
+            throw new HttpRequestException("Failed to get the key");
+        }
+        
         var key = res.Value.Key;
         var pem = key.ToRSA().ExportRSAPublicKeyPem();
         return new PublicKeyKekPem{PemString = pem};

@@ -44,7 +44,7 @@ public class TestKeyVaultService
         var kekId = $"KEK-{Guid.NewGuid()}";
         var kek = await _keyVaultService.GenerateKek(kekId);
         
-        // When is ask to get the public key as PEM
+        // When i ask to get the public key as PEM
         var gotPem = await _keyVaultService.DownloadPublicKekAsPemAsync(kekId);
         
         // Then the PEM should be the same as the one we generated
