@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Azure;
 using Azure.Core;
@@ -42,7 +43,12 @@ public class AuditService : IAuditService
 
     public async Task<string> GetKeyVaultActivityLogsAsync(int numOfDays)
     {
-        const string query = "AzureActivity | extend PackedRecord = pack_all() | project PackedRecord"; 
+        const string query = """
+                             AzureActivity 
+                             | project-away Authorization, Claims, Properties
+                             | extend PackedRecord = pack_all() 
+                             | project PackedRecord
+                             """; 
         return await GetLogs(numOfDays, query);
     }
 
@@ -77,6 +83,10 @@ public class AuditService : IAuditService
             rows.Add(parsedRecord);
         }
         
-        return JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(rows, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        });
     }
 }

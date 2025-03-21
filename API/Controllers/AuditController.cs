@@ -25,7 +25,7 @@ public class AuditController : Controller
     /// </summary>
     /// <param name="numOfDays">The time period to get logs in days</param>
     /// <returns>The key activity log entries for the specified period in JSON format</returns>
-    [HttpGet("/keys/{numOfDays}")]
+    [HttpGet("/keys/{numOfDays:int}")]
     public async Task<IActionResult> GetKeyOperationsPerformed(int numOfDays)
     {
         var res = await _auditService.GetKeyOperationsPerformedAsync(numOfDays);
@@ -37,10 +37,23 @@ public class AuditController : Controller
     /// </summary>
     /// <param name="numOfDays">The time period to get logs in days</param>
     /// <returns>The vault activity log entries for the specified period in JSON format</returns>
-    [HttpGet("/vault/{numOfDays}")]
+    [HttpGet("/vault/{numOfDays:int}")]
     public async Task<IActionResult> GetVaultOperationsPerformed(int numOfDays)
     {
         var res = await _auditService.GetVaultOperationsPerformedAsync(numOfDays);
+        return Ok(res);
+    }
+    
+    /// <summary>
+    /// Get the activity logs for the key vault
+    /// </summary>
+    /// <param name="numOfDays">The time period to get logs in days</param>
+    /// <response code="200">Returns the activity logs for the time period</response>
+    /// <response code="500">Internal server error</response>
+    [HttpGet("/activity/{numOfDays:int}")]
+    public async Task<IActionResult> GetKeyVaultActivityLogs(int numOfDays)
+    {
+        var res = await _auditService.GetKeyVaultActivityLogsAsync(numOfDays);
         return Ok(res);
     }
 }
