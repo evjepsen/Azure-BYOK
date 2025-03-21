@@ -1,4 +1,5 @@
 using API.Models;
+using Azure.ResourceManager.Monitor;
 using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -41,7 +42,10 @@ public class KeyVaultController : Controller
     /// Endpoint used to import (into Azure) a user specified encrypted key
     /// </summary>
     /// <param name="request">The key import request</param>
-    /// <returns>When successful the public part of the user specified key</returns>
+    /// <response code="200">Returns the public part of the user specified key</response>
+    /// <response code="400">If the request is invalid</response>
+    /// <response code="404">If the key encryption key or action groups used don't exist</response>
+    /// <response code="500">If there was an internal server error</response>
     [HttpPost]
     public async Task<IActionResult> ImportUserSpecifiedKey([FromBody] ImportKeyRequest request)
     {
@@ -62,10 +66,21 @@ public class KeyVaultController : Controller
         // Each of them have to exist
         foreach (var actionGroupName in request.ActionGroups)
         {
-            var actionGroup = await _alertService.GetActionGroupAsync(actionGroupName);
-            if (!actionGroup.HasData)
+            try
             {
-                return BadRequest($"The action group {actionGroupName} does not exist");
+                var actionGroup = await _alertService.GetActionGroupAsync(actionGroupName);
+                if (!actionGroup.HasData)
+                {
+                    return BadRequest($"The action group {actionGroupName} does not exist");
+                }
+            }
+            catch (Azure.RequestFailedException e)
+            {
+                return StatusCode(e.Status, e.ErrorCode);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
             }
         }
         
@@ -79,6 +94,8 @@ public class KeyVaultController : Controller
         {
             return BadRequest("Invalid base64 format for EncryptedKeyBase64");
         }
+        
+        // TODO: ADD CHECK THAT KEY ENCRYPTION KEY EXISTS
         
         // Upload the key to Azure
         var response = await _keyVaultService.UploadKey(request.Name, encryptedKey, request.KeyEncryptionKeyId);
