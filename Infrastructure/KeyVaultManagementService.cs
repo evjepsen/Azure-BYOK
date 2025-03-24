@@ -8,15 +8,8 @@ using Microsoft.Rest;
 
 namespace Infrastructure;
 
-public class KeyVaultManagementService : IKeyVaultManagementService
+public class KeyVaultManagementService(IConfiguration configuration) : IKeyVaultManagementService
 {
-    private IConfiguration _configuration;
-
-    public KeyVaultManagementService(IConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
-
     public async Task<bool> DoesKeyVaultHavePurgeProtectionAsync()
     {
         // Get management token.
@@ -29,11 +22,11 @@ public class KeyVaultManagementService : IKeyVaultManagementService
         // Create KeyVaultManagementClient to retrieve the Key Vault details.
         // has to be disposable
         using var keyVaultManagementClient = new KeyVaultManagementClient(credentials);
-        keyVaultManagementClient.SubscriptionId = _configuration["SUBSCRIPTION_ID"];
+        keyVaultManagementClient.SubscriptionId = configuration["SUBSCRIPTION_ID"];
         // Retrieve the Key Vault
         Vault vault = await keyVaultManagementClient.Vaults.GetAsync(
-            _configuration["RESOURCE_GROUP_NAME"], 
-            _configuration["KV_RESOURCE_NAME"]
+            configuration["RESOURCE_GROUP_NAME"], 
+            configuration["KV_RESOURCE_NAME"]
         );
 
         if (vault == null)
@@ -42,7 +35,7 @@ public class KeyVaultManagementService : IKeyVaultManagementService
             return false;
         }
         
-        // Return true if EnablePurgeProtection is true.
+        // Return true if the property: EnablePurgeProtection is found and is true.
         return vault.Properties.EnablePurgeProtection.HasValue &&
                vault.Properties.EnablePurgeProtection.Value;
     }
