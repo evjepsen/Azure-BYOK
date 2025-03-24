@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Azure;
 using Azure.Core;
@@ -33,7 +34,7 @@ public class AuditService : IAuditService
     public async Task<string> GetKeyOperationsPerformedAsync(int numOfDays)
     {
         // Ensures that the result is given in JSON format
-        const string query = "AzureDiagnostics | where OperationName startswith \"key\" | extend PackedRecord = pack_all()\n| project PackedRecord";
+        const string query = "AzureDiagnostics | where OperationName startswith \"key\" | extend PackedRecord = pack_all() | project PackedRecord";
         return await GetLogs(numOfDays, query);
     }
     
@@ -41,6 +42,17 @@ public class AuditService : IAuditService
     {
         // Ensures that the result is given in JSON format
         const string query = "AzureDiagnostics | where OperationName startswith \"vault\" | extend PackedRecord = pack_all() | project PackedRecord"; 
+        return await GetLogs(numOfDays, query);
+    }
+
+    public async Task<string> GetKeyVaultActivityLogsAsync(int numOfDays)
+    {
+        const string query = """
+                             AzureActivity 
+                             | project-away Authorization, Claims, Properties
+                             | extend PackedRecord = pack_all() 
+                             | project PackedRecord
+                             """; 
         return await GetLogs(numOfDays, query);
     }
 
@@ -54,21 +66,19 @@ public class AuditService : IAuditService
         var resourceId = $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.KeyVault/vaults/{keyVaultResource}";
         
         // Run the query to get all the key operations performed
-        // Todo: Add proper error handling
         Response<LogsQueryResult> result = await _client.QueryResourceAsync(
             new ResourceIdentifier(resourceId), 
             query,            
             new QueryTimeRange(TimeSpan.FromDays(numOfDays))
         );
 
-        if (result.Value.Status != 0)
+        if (!result.HasValue || result.Value.Status != 0)
         {
-            return $"An error occured when fetching the logs - {result.Value.Error}";
+            throw new HttpRequestException("The query did not return any results");
         }
         
-        var table = result.Value.Table;
-        
         // Translate the parsed records into json and then serialise the whole thing as a Json List
+        var table = result.Value.Table;
         var rows = new List<object?>();
         foreach (var row in table.Rows)
         {
@@ -76,6 +86,10 @@ public class AuditService : IAuditService
             rows.Add(parsedRecord);
         }
         
-        return JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(rows, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        });
     }
 }

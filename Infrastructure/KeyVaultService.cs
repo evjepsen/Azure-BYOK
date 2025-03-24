@@ -1,7 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using Azure;
 using Azure.Core;
 using Azure.Core.Pipeline;
 using Azure.Identity;
