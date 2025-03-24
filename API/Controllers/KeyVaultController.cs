@@ -147,7 +147,7 @@ public class KeyVaultController : Controller
     {
         try
         {
-            var response = await _keyVaultService.DeleteKeyAsync(kekName); 
+            var response = await _keyVaultService.DeleteKekAsync(kekName); 
             return Ok(response);
         }
         catch (RequestFailedException e)
@@ -173,7 +173,7 @@ public class KeyVaultController : Controller
     {
         try
         {
-            var response = await _keyVaultService.PurgeDeletedKeyAsync(kekName);
+            var response = await _keyVaultService.PurgeDeletedKekAsync(kekName);
             return StatusCode(response.Status);
         }
         catch (OperationCanceledException e)

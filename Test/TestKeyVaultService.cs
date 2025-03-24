@@ -1,16 +1,8 @@
 using Azure.Security.KeyVault.Keys;
 using Infrastructure;
 using Infrastructure.Interfaces;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Configuration;
 using Test.TestHelpers;
-using System;
-using System.Threading.Tasks;
-using Azure.Core;
-using Azure.Identity;
-using Microsoft.Azure.Management.KeyVault;
-using Microsoft.Azure.Management.KeyVault.Models;
-using Microsoft.Rest;
 
 namespace Test;
 
@@ -18,45 +10,10 @@ namespace Test;
 public class TestKeyVaultService
 {
     private ITokenService _tokenService;
-    private IKeyVaultService _keyVaultService;
+    private KeyVaultService _keyVaultService;
     private IConfiguration _configuration; 
-    private IKeyVaultManagementClient _keyVaultManagementClient;
-    private DefaultAzureCredential _tokenCredential;
+    private KeyVaultManagementService _keyVaultManagementService;
 
-    public async Task<bool> DoesKeyVaultHavePurgeProtectionAsync()
-    {
-        // Get management token.
-        var tokenCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions());
-        var tokenRequestContext = new TokenRequestContext(new[] { "https://management.azure.com/.default" });
-        var accessToken = await tokenCredential.GetTokenAsync(tokenRequestContext);
-
-        // Create ServiceClientCredentials credentials.
-        ServiceClientCredentials credentials = new TokenCredentials(accessToken.Token);
-
-        // Create KeyVaultManagementClient to retrieve the Key Vault details.
-        // has to be disposable
-        using (var keyVaultManagementClient = new KeyVaultManagementClient(credentials)
-               {
-                   SubscriptionId = _configuration["SUBSCRIPTION_ID"]
-               })
-        {
-            // Retrieve the Key Vault
-            Vault vault = await keyVaultManagementClient.Vaults.GetAsync(
-                _configuration["RESOURCE_GROUP_NAME"], 
-                _configuration["KV_RESOURCE_NAME"]
-            );
-
-            if (vault == null)
-            {
-                // Return false if the vault is not found.
-                return false;
-            }
-        
-            // Return true if EnablePurgeProtection is true.
-            return vault.Properties.EnablePurgeProtection.HasValue &&
-                   vault.Properties.EnablePurgeProtection.Value;
-        }
-    }
 
     
     [SetUp]
@@ -67,6 +24,7 @@ public class TestKeyVaultService
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
         _configuration = TestHelper.CreateTestConfiguration();
         _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory,_configuration);
+        _keyVaultManagementService = new KeyVaultManagementService(_configuration);
     }
 
     [Test]
@@ -118,39 +76,44 @@ public class TestKeyVaultService
     }
 
     [Test]
-    public async Task ShouldAbleToDelteAKey()
+    public async Task ShouldAbleToDelteAKek()
     {
         // Given a Key Encryption Key 
-        var kekName = "kaj";
-        var key = await _keyVaultService.GenerateKekAsync(kekName);
+        var kekName = $"Random-delete-{Guid.NewGuid()}";
+        var kek = await _keyVaultService.GenerateKekAsync(kekName);
         
         // When I ask to delete it
-        var delOp = await _keyVaultService.DeleteKeyAsync(kekName);
-        delOp.WaitForCompletionAsync();
+        var delOp = await _keyVaultService.DeleteKekAsync(kekName);
+        await delOp.WaitForCompletionAsync();
         
         // Then it should be deleted
         Assert.That(delOp.HasCompleted, Is.True);
         // and the key should be the same
-        Assert.That(delOp.Value.Id, Is.EqualTo(key.Id));
+        Assert.That(delOp.Value.Id, Is.EqualTo(kek.Id));
     }
     [Test]
-    public async Task ShouldAbleToPurgeADeletedKey()
+    public async Task ShouldAbleToPurgeADeletedKek()
     {
         // Given a Key Encryption Key
-        var kekName = "kaj";
+        var kekName = $"Random-pruge-{Guid.NewGuid()}";
         await _keyVaultService.GenerateKekAsync(kekName);
         
         // Which I delete
-        var delOp = await _keyVaultService.DeleteKeyAsync(kekName);
-        delOp.WaitForCompletionAsync();
+        var deleteKeyOperation = await _keyVaultService.DeleteKekAsync(kekName);
+        await deleteKeyOperation.WaitForCompletionAsync();
         
         // When I ask to purge it
-        var res = await _keyVaultService.PurgeDeletedKeyAsync(kekName);
-        Console.WriteLine(res);
+        var prugeKekOperation = await _keyVaultService.PurgeDeletedKekAsync(kekName);
         
-        if (await DoesKeyVaultHavePurgeProtectionAsync())
+        // Then it should be purged if the key vault has purge protection
+        if (await _keyVaultManagementService.DoesKeyVaultHavePurgeProtectionAsync())
         {
-            Assert.That(res.Status, Is.EqualTo(204));
+            Assert.That(prugeKekOperation.Status, Is.EqualTo(204));
+        }
+        // Otherwise this test is not applicable and should pass
+        else
+        {
+            Assert.Pass();
         }
         
         

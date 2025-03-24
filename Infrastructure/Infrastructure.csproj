@@ -15,6 +15,16 @@
       <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="8.0.13" />
       <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.3" />
       <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.5.0" />
+      <PackageReference Include="Microsoft.Rest.ClientRuntime.Azure" Version="3.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="Microsoft.Azure.Management.KeyVault">
+        <HintPath>..\..\..\.nuget\packages\microsoft.azure.management.keyvault\4.0.0-preview.1\lib\netstandard2.0\Microsoft.Azure.Management.KeyVault.dll</HintPath>
+      </Reference>
+      <Reference Include="Microsoft.Rest.ClientRuntime">
+        <HintPath>..\..\..\.nuget\packages\microsoft.rest.clientruntime\2.3.20\lib\netstandard2.0\Microsoft.Rest.ClientRuntime.dll</HintPath>
+      </Reference>
     </ItemGroup>
 
 </Project>

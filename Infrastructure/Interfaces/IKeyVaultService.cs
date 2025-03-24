@@ -38,11 +38,11 @@ public interface IKeyVaultService
     /// </summary>
     /// <param name="kekId"></param>
     /// <returns> The response message</returns>
-    public Task<DeleteKeyOperation> DeleteKeyAsync(string kekId);
+    public Task<DeleteKeyOperation> DeleteKekAsync(string kekId);
     /// <summary>
     /// Purge a deleted key
     /// </summary>
     /// <param name="kekId"></param>
     /// <returns> The response message </returns>
-    public Task<Response> PurgeDeletedKeyAsync(string kekId);
+    public Task<Response> PurgeDeletedKekAsync(string kekId);
 }
