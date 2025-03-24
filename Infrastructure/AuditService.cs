@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Azure;
 using Azure.Core;
+using Azure.Core.Pipeline;
 using Azure.Identity;
 using Azure.Monitor.Query;
 using Azure.Monitor.Query.Models;
@@ -15,7 +16,7 @@ public class AuditService : IAuditService
     private readonly LogsQueryClient _client;
     private readonly IConfiguration _configuration; 
 
-    public AuditService(IConfiguration configuration)
+    public AuditService(IConfiguration configuration, IHttpClientFactory httpClientFactory)
     {
         _configuration = configuration; 
         
@@ -23,7 +24,10 @@ public class AuditService : IAuditService
         var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions{});        
         
         // Create a LogQueryClient that can perform log queries
-        _client = new LogsQueryClient(credential);
+        _client = new LogsQueryClient(credential, new LogsQueryClientOptions
+        {
+            Transport = new HttpClientTransport(httpClientFactory.CreateClient("WaitAndRetry"))
+        });
     }
 
     public async Task<string> GetKeyOperationsPerformedAsync(int numOfDays)

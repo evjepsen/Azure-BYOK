@@ -14,7 +14,8 @@ public class TestAlertService
     public void Setup()
     {
         var testConfiguration = TestHelper.CreateTestConfiguration();
-        _alertService = new AlertService(testConfiguration);
+        IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
+        _alertService = new AlertService(testConfiguration, httpClientFactory);
     }
 
     [Test]
