@@ -37,7 +37,6 @@ public class FakeHsm : IFakeHsm
     public (string randomId, byte[] pk) GenerateRsaKey(int bitLength)
     {
         var rsa = RSA.Create(bitLength);
-        var sk = rsa.ExportPkcs8PrivateKey();
         var pk = rsa.ExportSubjectPublicKeyInfo();
         var keyEntry = new KeyEntry(rsa, Algorithm.RSA, bitLength);
         var randomId = Guid.NewGuid().ToString();
@@ -50,30 +49,26 @@ public class FakeHsm : IFakeHsm
         var aes = Aes.Create();
         aes.KeySize = bitLength;
         aes.GenerateKey();
-        var aesKey = aes.Key;
         var keyEntry = new KeyEntry(aes, Algorithm.AES, bitLength);
         var randomId = Guid.NewGuid().ToString();
         _keys.Add(randomId, keyEntry);
         return (randomId);
     }
 
-    public byte[]? GetPublicKeyOfId(string id)
+    public byte[] GetPublicKeyOfId(string id)
     {
-        // TODO: add error handling
-        if (!_keys.ContainsKey(id))
+        if (!_keys.TryGetValue(id, out KeyEntry? keyEntry))
         {
             throw new KeyNotFoundException();
         }
-        if(GetKeyProperties(id).Algorithm == Algorithm.RSA)
-        {
-            var rsa = (RSA)_keys[id].KeyObject;
-            return rsa.ExportSubjectPublicKeyInfo();
-        }
-        throw new Exception("Key is not an RSA key");
+        if (GetKeyProperties(id).Algorithm != Algorithm.RSA) throw new Exception("Key is not an RSA key");
+
+        var rsa = (RSA)keyEntry.KeyObject;
+        return rsa.ExportSubjectPublicKeyInfo();
     }
     
     // get the ids of the keys
-    public List<string> GetKeys()
+    public List<string> GetKeyIds()
     {
         return _keys.Keys.ToList();
     }
@@ -85,7 +80,13 @@ public class FakeHsm : IFakeHsm
 
     public byte[] EncryptWithKey(string id, byte[] data)
     {
-        var keyObject = _keys[id].KeyObject;
+        // check if the key exists
+        if (!_keys.TryGetValue(id, out KeyEntry? keyEntry))
+        {
+            throw new KeyNotFoundException();
+        }
+        
+        var keyObject = keyEntry.KeyObject;
         // Encrypt the AES key using the KEK using RSA-OAEP with SHA1
         if (GetKeyProperties(id).Algorithm != Algorithm.RSA) throw new Exception("The key with that id is not an RSA key");
         var rsa = (RSA)keyObject;
@@ -136,30 +137,30 @@ public class FakeHsm : IFakeHsm
 
     private byte[] GetPrivateKey(string id)
     {
-        if (!_keys.ContainsKey(id))
+        // check if the key exists
+        if (!_keys.TryGetValue(id, out KeyEntry? keyEntry))
         {
             throw new KeyNotFoundException();
         }
-        if(GetKeyProperties(id).Algorithm == Algorithm.RSA)
-        {
-            var rsa = (RSA)_keys[id].KeyObject;
-            return rsa.ExportPkcs8PrivateKey();
-        }
-        throw new Exception("Key is not an RSA key");
+        // check if the key is an RSA key
+        if (GetKeyProperties(id).Algorithm != Algorithm.RSA) throw new Exception("Key is not an RSA key");
+
+        var rsa = (RSA)keyEntry.KeyObject;
+        return rsa.ExportPkcs8PrivateKey();
     }
 
     private byte[] GetAesKey(string id)
     {
-        if (!_keys.ContainsKey(id))
+        // check if the key exists
+        if (!_keys.TryGetValue(id, out var keyEntry))
         {
             throw new KeyNotFoundException();
         }
-        if(GetKeyProperties(id).Algorithm == Algorithm.AES)
-        {
-            var aes = (Aes)_keys[id].KeyObject;
-            return aes.Key;
-        }
-        throw new Exception("Key is not an AES key");
+        // check if the key is an AES key
+        if (GetKeyProperties(id).Algorithm != Algorithm.AES) throw new Exception("Key is not an AES key");
+
+        var aes = (Aes)keyEntry.KeyObject;
+        return aes.Key;
     }
     
     private byte[] AesKeyWrapWithPadding(byte[] keyToWrap, byte[] aesKey)

@@ -19,7 +19,7 @@ public class FakeHsmTest
         // given a newly initialized HSM
         
         // when I ask for the number of keys
-        var numOfKeys = _fakeHsm.GetKeys().Count;
+        var numOfKeys = _fakeHsm.GetKeyIds().Count;
         
         // then it should be empty
         Assert.That(numOfKeys, Is.Zero);
@@ -31,7 +31,7 @@ public class FakeHsmTest
         // given a hsm with one key
         
         // when I ask for the number of keys
-        var numOfKeys = _fakeHsm.GetKeys().Count;
+        var numOfKeys = _fakeHsm.GetKeyIds().Count;
         
         // then it should have one key
         Assert.That(numOfKeys, Is.EqualTo(1));
