@@ -1,4 +1,6 @@
-using FakeHSM;
+using Infrastructure;
+using Test.TestHelpers;
+using FakeHsm = FakeHSM.FakeHsm;
 
 namespace Test;
 
@@ -47,5 +49,28 @@ public class FakeHsmTest
         
         // then it should be the same as the one I generated
         Assert.That(gotPk, Is.EqualTo(wantPk));
+    }
+
+    [Test]
+    public async Task ShouldBlobBeGenerated()
+    {
+        TestHelper.CreateTestConfiguration();
+        var _tokenService = new TokenService();
+        IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
+        var _configuration = TestHelper.CreateTestConfiguration();
+        var _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory,_configuration);
+        // Given a key vault service
+        
+        var kekName = $"KEK-{Guid.NewGuid()}";
+        var kek = await _keyVaultService.GenerateKekAsync(kekName);
+        var hsm = new FakeHsm();
+        // var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
+        // Given a Key Encryption Key 
+        
+        // When I ask to generate a blob
+        var transferBlob = hsm.GenerateBlob(kek);
+        
+        // Then it should be successful
+        Assert.That(transferBlob, Is.Not.Null);
     }
 }

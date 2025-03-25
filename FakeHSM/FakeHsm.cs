@@ -110,6 +110,7 @@ public class FakeHsm : IFakeHsm
         var encryptedAesKey = rsa.Encrypt(aesKey, RSAEncryptionPadding.OaepSHA1);
         
         
+        // The plaintext (Customer's key) is encrypted using the AES key using AES Key Wrap with padding
         var aes = Aes.Create();
         aes.Mode = CipherMode.CFB;
         aes.Padding = PaddingMode.PKCS7;
