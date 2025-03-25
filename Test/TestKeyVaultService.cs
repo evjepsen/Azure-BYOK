@@ -44,7 +44,8 @@ public class TestKeyVaultService
         // Given a Key Encryption Key and transfer blob
         var kekName = $"KEK-{Guid.NewGuid()}";
         var kek = await _keyVaultService.GenerateKekAsync(kekName);
-        var transferBlob = FakeHsm.SimulateHsm(kek);
+        var hsm = new FakeHSM.FakeHsm();
+        var transferBlob = hsm.GenerateBlob(kek);
         var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
         
         // When is ask to upload it

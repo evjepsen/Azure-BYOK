@@ -30,6 +30,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\FakeHSM\FakeHSM.csproj" />
       <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
     </ItemGroup>
     <ItemGroup>
