@@ -8,25 +8,33 @@ using Microsoft.Rest;
 
 namespace Infrastructure;
 
-public class KeyVaultManagementService(IConfiguration configuration) : IKeyVaultManagementService
+public class KeyVaultManagementService : IKeyVaultManagementService
 {
-    public async Task<bool> DoesKeyVaultHavePurgeProtectionAsync()
+    private readonly IConfiguration _configuration;
+    private readonly KeyVaultManagementClient _keyVaultManagementClient;
+    
+    // public KeyVaultService(ITokenService tokenService, IHttpClientFactory httpClientFactory, IConfiguration configuration)
+    public KeyVaultManagementService(IConfiguration configuration)
     {
+        _configuration = configuration;
         // Get management token.
         var tokenCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions());
         var tokenRequestContext = new TokenRequestContext(["https://management.azure.com/.default"]);
-        var accessToken = await tokenCredential.GetTokenAsync(tokenRequestContext);
+        var accessToken = tokenCredential.GetToken(tokenRequestContext);
         // Create ServiceClientCredentials credentials.
         ServiceClientCredentials credentials = new TokenCredentials(accessToken.Token);
 
-        // Create KeyVaultManagementClient to retrieve the Key Vault details.
-        // has to be disposable
-        using var keyVaultManagementClient = new KeyVaultManagementClient(credentials);
-        keyVaultManagementClient.SubscriptionId = configuration["SUBSCRIPTION_ID"];
+        // Create KeyVaultManagementClient 
+        _keyVaultManagementClient = new KeyVaultManagementClient(credentials);
+        // and set the subscription id.
+        _keyVaultManagementClient.SubscriptionId = configuration["SUBSCRIPTION_ID"];
+    }
+    public async Task<bool> DoesKeyVaultHavePurgeProtectionAsync()
+    {
         // Retrieve the Key Vault
-        Vault vault = await keyVaultManagementClient.Vaults.GetAsync(
-            configuration["RESOURCE_GROUP_NAME"], 
-            configuration["KV_RESOURCE_NAME"]
+        var vault = await _keyVaultManagementClient.Vaults.GetAsync(
+            _configuration["RESOURCE_GROUP_NAME"], 
+            _configuration["KV_RESOURCE_NAME"]
         );
 
         if (vault == null)

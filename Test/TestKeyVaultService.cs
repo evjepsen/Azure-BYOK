@@ -106,14 +106,16 @@ public class TestKeyVaultService
         var prugeKekOperation = await _keyVaultService.PurgeDeletedKekAsync(kekName);
         
         // Then it should be purged if the key vault has purge protection
-        if (await _keyVaultManagementService.DoesKeyVaultHavePurgeProtectionAsync())
+        if (!await _keyVaultManagementService.DoesKeyVaultHavePurgeProtectionAsync())
         {
             Assert.That(prugeKekOperation.Status, Is.EqualTo(204));
         }
-        // Otherwise this test is not applicable and should pass
+        // Otherwise, purging is not possible and the status should be xxx 
+        // and the message wil indicate that purging is not possible
+        // per https://learn.microsoft.com/en-us/dotnet/api/azure.security.keyvault.keys.keyclient.purgedeletedkeyasync?view=azure-dotnet&viewFallbackFrom=netstandard-2.0
         else
         {
-            Assert.Pass();
+            Assert.That(prugeKekOperation.Status, Is.EqualTo(204));
         }
         
         

@@ -120,9 +120,7 @@ public class KeyVaultService : IKeyVaultService
     }
     public async Task<DeleteKeyOperation> DeleteKekAsync(string kekId)
     {
-        var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30)); // Set a 30-second timeout
-        DeleteKeyOperation deleteKeyOperationAsync = await _client.StartDeleteKeyAsync(kekId, cancellationTokenSource.Token);
-        
+        DeleteKeyOperation deleteKeyOperationAsync = await _client.StartDeleteKeyAsync(kekId);
         deleteKeyOperationAsync.WaitForCompletion();
         
         return deleteKeyOperationAsync;
@@ -130,8 +128,7 @@ public class KeyVaultService : IKeyVaultService
     
     public async Task<Response> PurgeDeletedKekAsync(string kekId)
     {
-        var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(20)); // Set a 20-second timeout
-        var purgeOperation = await _client.PurgeDeletedKeyAsync(kekId,cancellationTokenSource.Token);
+        var purgeOperation = await _client.PurgeDeletedKeyAsync(kekId);
 
         return purgeOperation;
     }
