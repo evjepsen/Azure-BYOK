@@ -76,7 +76,7 @@ public class TestKeyVaultService
     }
 
     [Test]
-    public async Task ShouldAbleToDelteAKek()
+    public async Task ShouldBeAbleToDeleteAKek()
     {
         // Given a Key Encryption Key 
         var kekName = $"Random-delete-{Guid.NewGuid()}";
