@@ -95,7 +95,7 @@ public class TestKeyVaultService
     public async Task ShouldAbleToPurgeADeletedKek()
     {
         // Given a Key Encryption Key
-        var kekName = $"Random-pruge-{Guid.NewGuid()}";
+        var kekName = $"Random-purge-{Guid.NewGuid()}";
         await _keyVaultService.GenerateKekAsync(kekName);
         
         // Which I delete
