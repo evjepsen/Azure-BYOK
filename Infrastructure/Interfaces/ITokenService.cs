@@ -23,9 +23,11 @@ public interface ITokenService
     /// <returns>The request body for the upload request</returns>
     public UploadKeyRequestBody CreateBodyForRequest(KeyTransferBlob transferBlob);
     
+    
     /// <summary>
-    /// 
+    /// Creates an access token to be used for subsequent API requests
     /// </summary>
-    /// <returns></returns>
+    /// <param name="claims">The list of claims to include in the access token</param>
+    /// <returns>The JWT access token to be used in API requests</returns>
     public string GenerateAccessToken(List<Claim> claims);
 }
