@@ -19,7 +19,6 @@ public class FakeHsmTest
     [Test]
     public async Task ShouldBlobBeGenerated()
     {
-        TestHelper.CreateTestConfiguration();
         var tokenService = new TokenService();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
         var configuration = TestHelper.CreateTestConfiguration();
@@ -31,9 +30,26 @@ public class FakeHsmTest
         // Given a Key Encryption Key 
         
         // When I ask to generate a blob
-        var transferBlob = _fakeHsm.GenerateBlob(kek);
+        var transferBlob = _fakeHsm.GenerateCiphertextForBlob(kek.Key.ToRSA());
         
         // Then it should be successful
         Assert.That(transferBlob, Is.Not.Null);
+    }
+
+    [Test]
+    public async Task ShouldExampleProgramRun()
+    {
+        // generate kek
+        var tokenService = new TokenService();
+        IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
+        var configuration = TestHelper.CreateTestConfiguration();
+        var keyVaultService = new KeyVaultService(tokenService, httpClientFactory,configuration);
+        // Given a key vault service
+        
+        var kekName = $"KEK-{Guid.NewGuid()}";
+        var kek = await keyVaultService.GenerateKekAsync(kekName);
+        // Given a Key Encryption Key 
+        
+        
     }
 }

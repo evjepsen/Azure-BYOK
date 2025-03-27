@@ -10,7 +10,6 @@ namespace FakeHSM;
 
 public class FakeHsm : IFakeHsm
 {
-
     private static byte[] GeneratePrivateRsaKey(int bitLength)
     {
         var rsa = RSA.Create(bitLength);
@@ -26,17 +25,17 @@ public class FakeHsm : IFakeHsm
         return aes.Key;
     }
 
-    public byte[] GenerateBlob(KeyVaultKey kek)
+    public byte[] GenerateCiphertextForBlob(RSA rsaKek)
     {
         // Generate the customer's private key
         var sk = GeneratePrivateRsaKey(2048);
         // Convert the KEK to an RSA object
-        var rsa = kek.Key.ToRSA();
+        var rsa = rsaKek;
         
         // Generate the AES key
         var aesKey= GenerateAesKey(256);
         
-        // Encrypt the AES key using the KEK using RSA-OAEP with SHA1
+        // GenerateCiphertextForBlob the AES key using the KEK using RSA-OAEP with SHA1
         var encryptedAesKey = rsa.Encrypt(aesKey, RSAEncryptionPadding.OaepSHA1);
         
         
@@ -72,4 +71,13 @@ public class FakeHsm : IFakeHsm
         wrapper.Init(true, new KeyParameter(aesKey));
         return wrapper.Wrap(keyToWrap, 0, keyToWrap.Length);
     }
+
+    public byte[] SimulateHsm(RSA rsa)
+    {
+        var encryptedBytes = GenerateCiphertextForBlob(rsa);
+        var res = encryptedBytes;
+        
+        return res;
+    }
+    
 }

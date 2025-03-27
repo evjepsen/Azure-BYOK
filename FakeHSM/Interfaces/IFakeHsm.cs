@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Azure.Security.KeyVault.Keys;
 
 namespace FakeHSM.Interfaces;
@@ -8,9 +9,8 @@ namespace FakeHSM.Interfaces;
 public interface IFakeHsm
 {
     /// <summary>
-    /// Generate a Blob using a KeyVaultKey acting as a KEK
+    /// Generate the "ciphertext" part of the Blob using a KeyVaultKey acting as a KEK
     /// </summary>
-    /// <param name="kek">The Key Encryption Key</param>
-    /// <returns>A byte array of the blob</returns>
-    byte[] GenerateBlob(KeyVaultKey kek);
+    /// <returns>Ciphertext</returns>
+    byte[] GenerateCiphertextForBlob(RSA rsaKey);
 }
