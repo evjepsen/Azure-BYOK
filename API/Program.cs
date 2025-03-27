@@ -46,7 +46,10 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI( 
+        // Removes the requirement for clicking the "Try it out" button in Swagger UI when using a endpoint
+        options => options.EnableTryItOutByDefault()
+        );
 }
 
 app.UseHttpsRedirection();
