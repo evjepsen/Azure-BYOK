@@ -65,7 +65,9 @@ public class TokenService : ITokenService
     public string GenerateAccessToken(List<Claim> claims)
     {
         var jwtTokenHandler = new JwtSecurityTokenHandler();
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Secret"]));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
+            _configuration["Jwt:Secret"] ?? throw new InvalidOperationException("Missing JWT Secret"))
+        );
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         
         var token = new JwtSecurityToken(
