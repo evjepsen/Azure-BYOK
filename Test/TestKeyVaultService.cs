@@ -103,8 +103,7 @@ public class TestKeyVaultService
         await deleteKeyOperation.WaitForCompletionAsync();
         
         // When I ask to purge it
-        var prugeKekOperation = await _keyVaultService.PurgeDeletedKekAsync(kekName);
-        
+        var purgeKekOperation = await _keyVaultService.PurgeDeletedKekAsync(kekName);
         // Then it should be purged if the key vault has purge protection
         if (!await _keyVaultManagementService.DoesKeyVaultHavePurgeProtectionAsync())
         {
