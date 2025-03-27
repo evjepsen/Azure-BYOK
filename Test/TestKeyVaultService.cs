@@ -45,7 +45,7 @@ public class TestKeyVaultService
         var kekName = $"KEK-{Guid.NewGuid()}";
         var kek = await _keyVaultService.GenerateKekAsync(kekName);
         var hsm = new FakeHSM.FakeHsm();
-        var encryptedKek = hsm.GenerateCiphertextForBlob(kek.Key.ToRSA());
+        var encryptedKek = hsm.GeneratePrivateKeyForBlob(kek.Key.ToRSA());
         var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
         
         // When is ask to upload it

@@ -12,5 +12,5 @@ public interface IFakeHsm
     /// Generate the "ciphertext" part of the Blob using a KeyVaultKey acting as a KEK
     /// </summary>
     /// <returns>Ciphertext</returns>
-    byte[] GenerateCiphertextForBlob(RSA rsaKey);
+    byte[] GeneratePrivateKeyForBlob(RSA rsaKey);
 }

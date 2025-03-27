@@ -8,23 +8,21 @@ public class ExampleProgram
     public static void Main(string[] args)
     {
         Console.WriteLine("Starting HSM Simulation...");
+        
+        var filepath = args[1];
+        // Read stdin pem from 
+        // Check if the user provided a pem file
+        if (args[0] != "--pem" || !filepath.EndsWith(".pem"))
+        {
+            Console.WriteLine("You must provide a .pem file as argument.");
+            Console.WriteLine("Please use argument --pem <absolute path to pem file>");
+            return;
+        }
 
-        // given a pem of a kek on the key vault
-        var pem = """
-                  -----BEGIN RSA PUBLIC KEY-----
-                  MIIBCgKCAQEAraXkqjKzVBxcPRZ2MfrCFLkOZn75o/hp27ZeBb3ed72e5JyOdYgX
-                  5QO/buupPGeMF4M2NyysZ/tVwQhLJdpbjiuYGAa2sCnYnVQnU2uaxbOVhxU0fw4T
-                  657lsNk0taqWACjIBX7BB8zWHMIosLA9n6zQrLPfCmmub/RQXFtpX3OW3Dg3orXR
-                  FaEpQAcC2i2yJXzglmz0b+g2GLeQMhQryweEo4B0COjnUSTzOsn0WLE6WbhbhAGy
-                  X7bYxZbNxYub/u48UjE8wMLJwOONlax/D+3luS7+K7NxgeRD/BASBUZlm0+64P9j
-                  2XA/3YEYNRHwZz/rHCyW14WpKUuKrdHj5wIDAQAB
-                  -----END RSA PUBLIC KEY----- 
-                  """;
-            
-
-        // Create a test KeyVaultKey
-        // var pemFilePath = "../../../key.pem";
-        // var pemContent = File.ReadAllText(pemFilePath);
+        // Check if the file is a pem file
+        Console.WriteLine($"Loading PEM from: {args[0]}...");
+        
+        var pem = File.ReadAllText($"{filepath}");
 
         // Parse the PEM content
         var rsa = RSA.Create();
@@ -32,14 +30,16 @@ public class ExampleProgram
         
         // Run your simulation
         var fakeHsm = new FakeHsm();
-        var result = fakeHsm.SimulateHsm(rsa);
+        var blobCiphertext = fakeHsm.GeneratePrivateKeyForBlob(rsa);
+        Console.WriteLine("Generated private key...");
         
-        // Display the result
-        Console.WriteLine($"Simulation complete. Generated {result.Length} bytes of encrypted data.");
-        Console.WriteLine("First 20 bytes (hex): " + BitConverter.ToString(result, 0, result.Length));
-        var base64 = Convert.ToBase64String(result);
-        // File.WriteAllText("../../../key.txt", base64);
-        Console.WriteLine("Press any key to exit...");
+        
+        var base64 = Convert.ToBase64String(blobCiphertext);
+        // Console.WriteLine("Converting to base64...");
+        
+        Console.WriteLine($"Key ready to upload:\n{base64}");
+        
+        Console.WriteLine($"Press any key to exit...");
         Console.ReadKey();
     }
 }

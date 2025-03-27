@@ -25,7 +25,7 @@ public class FakeHsm : IFakeHsm
         return aes.Key;
     }
 
-    public byte[] GenerateCiphertextForBlob(RSA rsaKek)
+    public byte[] GeneratePrivateKeyForBlob(RSA rsaKek)
     {
         // Generate the customer's private key
         var sk = GeneratePrivateRsaKey(2048);
@@ -35,7 +35,7 @@ public class FakeHsm : IFakeHsm
         // Generate the AES key
         var aesKey= GenerateAesKey(256);
         
-        // GenerateCiphertextForBlob the AES key using the KEK using RSA-OAEP with SHA1
+        // GeneratePrivateKeyForBlob the AES key using the KEK using RSA-OAEP with SHA1
         var encryptedAesKey = rsa.Encrypt(aesKey, RSAEncryptionPadding.OaepSHA1);
         
         
@@ -70,14 +70,6 @@ public class FakeHsm : IFakeHsm
         IWrapper wrapper = new AesWrapPadEngine();
         wrapper.Init(true, new KeyParameter(aesKey));
         return wrapper.Wrap(keyToWrap, 0, keyToWrap.Length);
-    }
-
-    public byte[] SimulateHsm(RSA rsa)
-    {
-        var encryptedBytes = GenerateCiphertextForBlob(rsa);
-        var res = encryptedBytes;
-        
-        return res;
     }
     
 }
