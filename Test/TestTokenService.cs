@@ -13,7 +13,8 @@ public class TestTokenService
     public void Setup()
     {
         TestHelper.CreateTestConfiguration();
-        _tokenService = new TokenService();
+        var configuration = TestHelper.CreateTestConfiguration();
+        _tokenService = new TokenService(configuration);
     }
     
     [Test]

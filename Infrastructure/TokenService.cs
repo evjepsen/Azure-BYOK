@@ -1,13 +1,23 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using Infrastructure.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 using Infrastructure.Helpers;
 using Infrastructure.Models;
+using Microsoft.Extensions.Configuration;
 
 namespace Infrastructure;
 
 public class TokenService : ITokenService
 {
+    private readonly IConfiguration _configuration;
+
+    public TokenService(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+    
     public KeyTransferBlob CreateKeyTransferBlob(byte[] cipherText, string kekId)
     {
         var keyTransferBlob = new KeyTransferBlob
@@ -50,5 +60,23 @@ public class TokenService : ITokenService
         };
         
         return keyRequestBody;
+    }
+
+    public string GenerateAccessToken(List<Claim> claims)
+    {
+        var jwtTokenHandler = new JwtSecurityTokenHandler();
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Secret"]));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        
+        var token = new JwtSecurityToken(
+            issuer: _configuration["Jwt:Issuer"],
+            audience: _configuration["Jwt:Audience"],
+            claims: claims,
+            expires: DateTime.Now.AddHours(1),
+            signingCredentials: credentials
+        );
+        
+        return jwtTokenHandler.WriteToken(token);
+        
     }
 }

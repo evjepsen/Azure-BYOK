@@ -1,7 +1,9 @@
+using System.Security.Claims;
+using Google.Apis.Auth.AspNetCore3;
+using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Protocols.Configuration;
 
 namespace API.Controllers;
 
@@ -12,18 +14,26 @@ namespace API.Controllers;
 public class AuthenticationController : Controller
 {
     private readonly Dictionary<string,string> _schemeMap;
+    private readonly string[] _validEmails;
+    private readonly ITokenService _tokenService;
 
     /// <summary>
     /// Constructor for the authentication controller
     /// </summary>
-    public AuthenticationController()
+    public AuthenticationController(IConfiguration configuration, ITokenService tokenService)
     {
+        _tokenService = tokenService;
         // Map over the valid authentication schemes
         _schemeMap = new Dictionary<string, string>
         {
-            { "Microsoft", OpenIdConnectDefaults.AuthenticationScheme },
-            { "Google", GoogleDefaults.AuthenticationScheme }
+            { "Microsoft", "MicrosoftAuth" },
+            { "Google", GoogleOpenIdConnectDefaults.AuthenticationScheme }
         };
+        
+        // Valid email addresses
+        _validEmails = configuration
+            .GetSection("AllowedEmails")
+            .Get<string []>() ?? throw new InvalidConfigurationException("No valid emails found in configuration");;
     }
     
     /// <summary>
@@ -34,12 +44,22 @@ public class AuthenticationController : Controller
     {
         var properties = new AuthenticationProperties
         {
-            RedirectUri = Url.Action(nameof(Callback))
+            RedirectUri = Url.Action(nameof(Callback), null, new { provider }, Request.Scheme),
+            Items = 
+            {
+                { "provider", provider }
+            }
         };
 
         if (!_schemeMap.TryGetValue(provider, out var scheme))
         {
             return BadRequest("The provider is not supported");
+        }
+        
+        if (provider == "Google")
+        {
+            properties.Items["prompt"] = "select_account";
+            properties.Items["scope"] = "openid email profile";
         }
         
         return Challenge(properties, scheme);
@@ -49,27 +69,37 @@ public class AuthenticationController : Controller
     /// Callback for the authentication process
     /// </summary>
     [HttpGet("callback")]
-    public async Task<IActionResult> Callback()
+    public async Task<IActionResult> Callback(string provider)
     {
-        AuthenticateResult? authenticationResult = null;
-        string? authenticatedScheme = null;
+        var authResult = await HttpContext.AuthenticateAsync(_schemeMap[provider]);
         
-        // Try to authenticate with the different schemes
-        foreach (var scheme in _schemeMap.Values)
+        if (!authResult.Succeeded)
         {
-            authenticationResult = await HttpContext.AuthenticateAsync(scheme);
-            if (!authenticationResult.Succeeded) continue;
-            authenticatedScheme = scheme;
-            break;
+            return BadRequest("Authentication failed");
         }
         
-        if (authenticationResult == null || !authenticationResult.Succeeded)
-        {
-            return Unauthorized("Authentication failed");
-        }
+        // Check that the user's emails is in the allowed list
+        var email = authResult.Principal.FindFirstValue(ClaimTypes.Email);
+        var userId = authResult.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        var name = authResult.Principal.FindFirstValue(ClaimTypes.Name);
         
-        var accessToken = await HttpContext.GetTokenAsync(authenticatedScheme, "access_token");
+        if (!_validEmails.Contains(email)) 
+        {
+            return Unauthorized();
+        }
 
+        // Create the JWT Access token for further use of the API
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, userId ?? string.Empty),
+            new(ClaimTypes.Email, email ?? string.Empty),
+            new(ClaimTypes.Name, name ?? string.Empty),
+            new("provider", provider),
+        };
+        
+        var accessToken = _tokenService.GenerateAccessToken(claims);
+        
+        // Return the access token for further use
         return Ok(new {accessToken});
     }
 }

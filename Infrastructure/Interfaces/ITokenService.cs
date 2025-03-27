@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Infrastructure.Models;
 
 namespace Infrastructure.Interfaces;
@@ -22,4 +23,9 @@ public interface ITokenService
     /// <returns>The request body for the upload request</returns>
     public UploadKeyRequestBody CreateBodyForRequest(KeyTransferBlob transferBlob);
     
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <returns></returns>
+    public string GenerateAccessToken(List<Claim> claims);
 }

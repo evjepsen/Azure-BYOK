@@ -1,5 +1,7 @@
 using System.Reflection;
 using System.Security.Claims;
+using System.Text;
+using Google.Apis.Auth.AspNetCore3;
 using Infrastructure;
 using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -81,12 +83,17 @@ builder.Services.AddAuthentication(options =>
     })
     .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
-        options.Authority = "https://login.microsoftonline.com/common/v2.0";
-        options.Audience = $"api://{builder.Configuration["Authentication:Microsoft:ClientId"]}";
+        options.SaveToken = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = false,
-            ValidateAudience = true
+            ValidateIssuer = true,
+            ValidateLifetime = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"])),
+            RequireExpirationTime = true
         };
     })
     .AddCookie(options =>
@@ -96,7 +103,7 @@ builder.Services.AddAuthentication(options =>
         options.LoginPath = new PathString("/authentication/login");
         options.LogoutPath = new PathString("/authentication/logout");
     })
-    .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
+    .AddOpenIdConnect("MicrosoftAuth", options =>
     {
         options.Authority = "https://login.microsoftonline.com/common/v2.0";
         options.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"] ??
@@ -116,18 +123,14 @@ builder.Services.AddAuthentication(options =>
             ValidateIssuer = false,
         };
     })
-    .AddGoogle(options =>
+    .AddGoogleOpenIdConnect(GoogleOpenIdConnectDefaults.AuthenticationScheme, options =>
     {
         options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ??
                            throw new InvalidOperationException("Google Client ID missing");
         options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ??
                                throw new InvalidOperationException("Google Client Secret missing");
-
-        options.SaveTokens = true;
-        options.UsePkce = true;
-        options.Scope.Add("openid");
-        options.Scope.Add("profile");
-        options.Scope.Add("email");
+        
+        options.CallbackPath = new PathString("/signin-google");
     });
 
 builder.Services.AddAuthorizationBuilder()
@@ -148,7 +151,7 @@ builder.Services.AddAuthorizationBuilder()
         
         policy.RequireAssertion(context =>
         {
-            var email = context.User.FindFirst(ClaimTypes.Upn);
+            var email = context.User.FindFirst(ClaimTypes.Email);
             return email != null && validEmails.Contains(email.Value);
         });
     });
