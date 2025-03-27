@@ -33,7 +33,7 @@ public class AuthenticationController : Controller
         // Valid email addresses
         _validEmails = configuration
             .GetSection("AllowedEmails")
-            .Get<string []>() ?? throw new InvalidConfigurationException("No valid emails found in configuration");;
+            .Get<string []>() ?? throw new InvalidConfigurationException("No valid emails found in configuration");
     }
     
     /// <summary>
@@ -54,12 +54,6 @@ public class AuthenticationController : Controller
         if (!_schemeMap.TryGetValue(provider, out var scheme))
         {
             return BadRequest("The provider is not supported");
-        }
-        
-        if (provider == "Google")
-        {
-            properties.Items["prompt"] = "select_account";
-            properties.Items["scope"] = "openid email profile";
         }
         
         return Challenge(properties, scheme);
@@ -85,7 +79,7 @@ public class AuthenticationController : Controller
         
         if (!_validEmails.Contains(email)) 
         {
-            return Unauthorized();
+            return Unauthorized("No access");
         }
 
         // Create the JWT Access token for further use of the API

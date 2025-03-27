@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.IdentityModel.Protocols.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.IdentityModel.Validators;
 using Microsoft.OpenApi.Models;
 using Polly;
 
@@ -110,18 +111,18 @@ builder.Services.AddAuthentication(options =>
                            throw new InvalidOperationException("Microsoft Client ID missing");
         options.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"] ??
                                throw new InvalidOperationException("Microsoft Client Secret missing");
+        
         options.ResponseType = "code";
         options.UsePkce = true;
         options.SaveTokens = true;
         options.CallbackPath = new PathString("/signin-oidc");
+        
         options.Scope.Add("openid");
         options.Scope.Add("profile");
         options.Scope.Add("email");
-        options.Scope.Add($"api://{builder.Configuration["Authentication:Microsoft:ClientId"]}/read.write");
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = false,
-        };
+
+        options.TokenValidationParameters.IssuerValidator = AadIssuerValidator.GetAadIssuerValidator(
+            options.Authority).Validate;
     })
     .AddGoogleOpenIdConnect(GoogleOpenIdConnectDefaults.AuthenticationScheme, options =>
     {
