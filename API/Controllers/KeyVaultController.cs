@@ -2,6 +2,8 @@ using API.Models;
 using Azure.ResourceManager.Monitor;
 using Azure;
 using Infrastructure.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
@@ -9,6 +11,7 @@ namespace API.Controllers;
 /// <summary>
 /// Controller to interact with the Azure Key Vault
 /// </summary>
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = "ShouldBeAllowedEmail")]
 [Route("[controller]")]
 public class KeyVaultController : Controller
 {
@@ -48,6 +51,7 @@ public class KeyVaultController : Controller
     /// <param name="request">The key import request</param>
     /// <response code="200">Returns the public part of the user specified key</response>
     /// <response code="400">If the request is invalid</response>
+    /// <response code="401">Unauthorized</response>
     /// <response code="404">If the key encryption key or action groups used don't exist</response>
     /// <response code="500">If there was an internal server error</response>
     [HttpPost]
@@ -117,6 +121,7 @@ public class KeyVaultController : Controller
     /// <response code="200">Returns the public key of KEK in PEM format</response>
     /// <response code="404">Key not found</response>
     /// <response code="400">Bad request. See the error code for details</response>
+    /// <response code="401">Unauthorized</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("{kekName}")]
     public async Task<IActionResult> GetPublicKeyEncryptionKeyAsPem(string kekName)

@@ -12,7 +12,8 @@ public class TestAuditService
     public void Setup()
     {
         var config = TestHelper.CreateTestConfiguration();
-        _auditService = new AuditService(config);
+        IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
+        _auditService = new AuditService(config, httpClientFactory);
     }
 
     [Test]
@@ -35,4 +36,14 @@ public class TestAuditService
         // Then it should return a result
         Assert.That(result, Is.Not.Empty);
     } 
+    
+    [Test]
+    public async Task ShouldReturnLogsOfKeyVaultActivity()
+    {
+        // Given an Audit Service
+        // When I ask for the key vault operations performed in the last 24 hours
+        var result = await _auditService.GetKeyVaultActivityLogsAsync(1);
+        // Then it should return a result
+        Assert.That(result, Is.Not.Empty);
+    }
 }

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Azure;
 using Azure.Core;
+using Azure.Core.Pipeline;
 using Azure.Identity;
 using Azure.Security.KeyVault.Keys;
 using Infrastructure.Helpers;
@@ -31,8 +32,13 @@ public class KeyVaultService : IKeyVaultService
         
         // the azure key vault client
         _client = new KeyClient(
-            new Uri( _configuration["VAULT_URI"]?? throw new InvalidOperationException("No Vault URI set")),
-            _tokenCredential);
+            new Uri(_configuration["VAULT_URI"]?? throw new InvalidOperationException("No Vault URI set")),
+            _tokenCredential,
+            new KeyClientOptions
+            {
+                Transport = new HttpClientTransport(_httpClientFactory.CreateClient("WaitAndRetry"))
+            }
+        );
         
         // Scope for Azure Key Vault and the credentials
         _scopes = ["https://vault.azure.net/.default"];
@@ -41,7 +47,7 @@ public class KeyVaultService : IKeyVaultService
 
     public async Task<KeyVaultUploadKeyResponse> UploadKey(string name, byte[] encryptedData, string kekId)
     {
-        var httpClient = _httpClientFactory.CreateClient();
+        var httpClient = _httpClientFactory.CreateClient("WaitAndRetry");
         // Create the BYOK Blob for upload
         var transferBlob = _tokenService.CreateKeyTransferBlob(encryptedData, kekId);
         

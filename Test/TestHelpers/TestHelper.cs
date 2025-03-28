@@ -7,7 +7,8 @@ public static class TestHelper
     public static IConfiguration CreateTestConfiguration()
     {
         var builder = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.azure.json", false, true);
+            .AddJsonFile("appsettings.azure.json", false)
+            .AddJsonFile("appsettings.json", false);
         var res = builder.Build();
         return res;
     }

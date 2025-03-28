@@ -1,5 +1,6 @@
 using Azure;
 using Azure.Core;
+using Azure.Core.Pipeline;
 using Azure.Identity;
 using Azure.ResourceManager;
 using Azure.ResourceManager.Monitor;
@@ -20,15 +21,19 @@ public class AlertService : IAlertService
     private readonly string _resourceGroupName;
     private readonly string _keyVaultResourceId;
 
-    public AlertService(IConfiguration configuration)
+    public AlertService(IConfiguration configuration, IHttpClientFactory httpClientFactory)
     {
         TokenCredential credential = new DefaultAzureCredential();
-        _armClient = new ArmClient(credential);
 
         // Save the id's needed
         _subscriptionId =    configuration["SUBSCRIPTION_ID"] ?? throw new EnvironmentVariableNotSetException("The Subscription Id was not set");
         _resourceGroupName = configuration["RESOURCE_GROUP_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Group Name was not set");
         var keyVaultResource = configuration["KV_RESOURCE_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Name was not set");
+        
+        _armClient = new ArmClient(credential, _subscriptionId, new ArmClientOptions
+        {
+            Transport = new HttpClientTransport(httpClientFactory.CreateClient("WaitAndRetry"))
+        });
         
         // Set up the resource id
         _keyVaultResourceId = $"/subscriptions/{_subscriptionId}/resourceGroups/{_resourceGroupName}/providers/Microsoft.KeyVault/vaults/{keyVaultResource}";

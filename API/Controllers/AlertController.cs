@@ -1,5 +1,7 @@
 using Infrastructure.Interfaces;
 using Infrastructure.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
@@ -7,6 +9,7 @@ namespace API.Controllers;
 /// <summary>
 /// Controller to manage alerts and Action Groups
 /// </summary>
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = "ShouldBeAllowedEmail")]
 [Route("[controller]")]
 public class AlertController : Controller
 {
@@ -27,6 +30,8 @@ public class AlertController : Controller
     /// <param name="name">Name of the action group</param>
     /// <response code="200">Returns the action group</response>
     /// <response code="400">If the request is invalid</response>
+    /// <response code="401">Unauthorized</response>
+    /// <response code="403">Forbidden</response>
     /// <response code="404">If the action group couldn't be found</response>
     /// <response code="500">If there was an internal server error</response>
     [HttpGet("/group/{name}")]
@@ -55,6 +60,8 @@ public class AlertController : Controller
     /// <param name="receivers">Name and email of the people who are to receive the alert</param>
     /// <response code="200">Returns the new action group</response>
     /// <response code="400">If the request is invalid</response>
+    /// <response code="401">Unauthorized</response>
+    /// <response code="403">Forbidden</response>
     /// <response code="500">If there was an internal server error</response>
     [HttpPost("/group/{name}")]
     public async Task<IActionResult> CreateActionGroup(string name, [FromBody] List<EmailReceiver> receivers)
@@ -81,6 +88,8 @@ public class AlertController : Controller
     /// <param name="actionGroups">The action groups that should be notified</param>
     /// <response code="200">Returns the new key vault alert</response>
     /// <response code="400">If the request is invalid</response>
+    /// <response code="401">Unauthorized</response>
+    /// <response code="403">Forbidden</response>
     /// <response code="500">If there was an internal server error</response>
     [HttpPost("/alert/{name}")]
     public async Task<IActionResult> CreateKeyVaultAlert(string name, [FromBody] List<string> actionGroups)
