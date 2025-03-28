@@ -1,23 +1,25 @@
-using Microsoft.Extensions.Configuration;
+using Infrastructure.Options;
+using Microsoft.Extensions.Options;
 using Test.TestHelpers;
 
 namespace Test;
 
 public class TestEnvVars
 {
-    private IConfiguration _configuration; 
+    private IOptions<ApplicationOptions> _applicationOptions;
     
     [SetUp]
     public void Setup()
     {
-        _configuration = TestHelper.CreateTestConfiguration();
+        var configuration = TestHelper.CreateTestConfiguration();
+        _applicationOptions = TestHelper.CreateApplicationOptions(configuration);
     }
 
     [Test]
     public void ShouldVaultUriExist()
     {
         // When I ask for An environment variable
-        var vaultUri = _configuration["VAULT_URI"];
+        var vaultUri = _applicationOptions.Value.VaultUri;
         // Then it should be there
         Assert.IsNotNull(vaultUri);
     } 
@@ -25,7 +27,7 @@ public class TestEnvVars
     public void ShouldSubscriptionIdExist()
     {
         // When I ask for An environment variable
-        var subscriptionId= _configuration["SUBSCRIPTION_ID"];
+        var subscriptionId= _applicationOptions.Value.SubscriptionId;
         // Then it should be there
         Assert.IsNotNull(subscriptionId);
     } 
@@ -33,7 +35,7 @@ public class TestEnvVars
     public void ShouldResourceGroupExist()
     {
         // When I ask for An environment variable
-        var resourceGroup = _configuration["RESOURCE_GROUP_NAME"];
+        var resourceGroup = _applicationOptions.Value.ResourceGroupName;
         // Then it should be there
         Assert.IsNotNull(resourceGroup);
     } 
@@ -41,8 +43,8 @@ public class TestEnvVars
     public void ShouldKeyVaultResourceExist()
     {
         // When I ask for An environment variable
-        var KVResource= _configuration["KV_RESOURCE_NAME"];
+        var kvResource= _applicationOptions.Value.KeyVaultResourceName;
         // Then it should be there
-        Assert.IsNotNull(KVResource);
+        Assert.IsNotNull(kvResource);
     } 
 }

@@ -6,23 +6,22 @@ using Azure.Core.Pipeline;
 using Azure.Identity;
 using Azure.Monitor.Query;
 using Azure.Monitor.Query.Models;
-using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
-using Microsoft.Extensions.Configuration;
+using Infrastructure.Options;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure;
 
 public class AuditService : IAuditService
 {
     private readonly LogsQueryClient _client;
-    private readonly IConfiguration _configuration; 
+    private readonly ApplicationOptions _applicationOptions;
 
-    public AuditService(IConfiguration configuration, IHttpClientFactory httpClientFactory)
+    public AuditService(IOptions<ApplicationOptions> applicationOptions, IHttpClientFactory httpClientFactory)
     {
-        _configuration = configuration; 
-        
+        _applicationOptions = applicationOptions.Value;
         // Setup credentials for access
-        var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions{});        
+        var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions());        
         
         // Create a LogQueryClient that can perform log queries
         _client = new LogsQueryClient(credential, new LogsQueryClientOptions
@@ -58,9 +57,9 @@ public class AuditService : IAuditService
 
     private async Task<string> GetLogs(int numOfDays, string query)
     {
-        var subscriptionId =  _configuration["SUBSCRIPTION_ID"] ?? throw new EnvironmentVariableNotSetException("The Subscription Id was not set");
-        var resourceGroupName = _configuration["RESOURCE_GROUP_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Group Name was not set");
-        var keyVaultResource = _configuration["KV_RESOURCE_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Name was not set");
+        var subscriptionId = _applicationOptions.SubscriptionId;
+        var resourceGroupName = _applicationOptions.ResourceGroupName;
+        var keyVaultResource = _applicationOptions.KeyVaultResourceName;
         
         // Setup the resourceId
         var resourceId = $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.KeyVault/vaults/{keyVaultResource}";

@@ -1,7 +1,6 @@
 using Azure.Security.KeyVault.Keys;
 using Infrastructure;
 using Infrastructure.Interfaces;
-using Microsoft.Extensions.Configuration;
 using Test.TestHelpers;
 
 namespace Test;
@@ -11,7 +10,6 @@ public class TestKeyVaultService
 {
     private ITokenService _tokenService;
     private KeyVaultService _keyVaultService;
-    private IConfiguration _configuration; 
     private KeyVaultManagementService _keyVaultManagementService;
     
     [SetUp]
@@ -19,10 +17,11 @@ public class TestKeyVaultService
     {
         TestHelper.CreateTestConfiguration();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
-        _configuration = TestHelper.CreateTestConfiguration();
-        _tokenService = new TokenService(TestHelper.CreateJwtOptions(_configuration));
-        _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory,_configuration);
-        _keyVaultManagementService = new KeyVaultManagementService(_configuration);
+        var configuration = TestHelper.CreateTestConfiguration();
+        _tokenService = new TokenService(TestHelper.CreateJwtOptions(configuration));
+        var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
+        _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory, applicationOptions);
+        _keyVaultManagementService = new KeyVaultManagementService(applicationOptions);
     }
 
     [Test]

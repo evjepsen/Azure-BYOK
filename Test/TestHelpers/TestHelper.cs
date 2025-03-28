@@ -22,4 +22,11 @@ public static class TestHelper
         configuration.GetSection(JwtOptions.Jwt).Bind(jwtOptions);
         return Options.Create(jwtOptions);
     }
+    
+    public static IOptions<ApplicationOptions> CreateApplicationOptions(IConfiguration configuration)
+    {
+        var applicationOptions = new ApplicationOptions();
+        configuration.GetSection(ApplicationOptions.Application).Bind(applicationOptions);
+        return Options.Create(applicationOptions);
+    }
 }

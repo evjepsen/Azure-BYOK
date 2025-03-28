@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Infrastructure;
 using Infrastructure.Interfaces;
+using Infrastructure.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Test.TestHelpers;
@@ -11,15 +12,16 @@ namespace Test;
 public class TestTokenService
 {
     private ITokenService _tokenService;
-    private IConfiguration _configuration;
+    private JwtOptions _jwtOptions;
 
     [SetUp]
     public void Setup()
     {
         TestHelper.CreateTestConfiguration();
         var configuration = TestHelper.CreateTestConfiguration();
-        _tokenService = new TokenService(TestHelper.CreateJwtOptions(configuration));
-        _configuration = TestHelper.CreateTestConfiguration();
+        var jwtOptions = TestHelper.CreateJwtOptions(configuration);
+        _tokenService = new TokenService(jwtOptions);
+        _jwtOptions = jwtOptions.Value;
     }
     
     [Test]
@@ -81,8 +83,8 @@ public class TestTokenService
         var handler = new JwtSecurityTokenHandler();
         var jwt = handler.ReadJwtToken(accessToken);
         
-        Assert.That(jwt.Issuer, Is.EqualTo(_configuration["Jwt:Issuer"]));
-        Assert.That(jwt.Audiences, Does.Contain(_configuration["Jwt:Audience"]));
+        Assert.That(jwt.Issuer, Is.EqualTo(_jwtOptions.Issuer));
+        Assert.That(jwt.Audiences, Does.Contain(_jwtOptions.Audience));
         
         var gotClaims = jwt.Claims.ToList();
         Assert.That(gotClaims, Has.Count.EqualTo(7));

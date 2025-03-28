@@ -10,6 +10,8 @@ using Infrastructure.Helpers;
 using Infrastructure.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Infrastructure.Models;
+using Infrastructure.Options;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure;
 
@@ -20,19 +22,19 @@ public class KeyVaultService : IKeyVaultService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly TokenCredential _tokenCredential;
     private readonly string[] _scopes;
-    private readonly IConfiguration _configuration; 
+    private readonly ApplicationOptions _applicationOptions; 
 
-    public KeyVaultService(ITokenService tokenService, IHttpClientFactory httpClientFactory, IConfiguration configuration)
+    public KeyVaultService(ITokenService tokenService, IHttpClientFactory httpClientFactory, IOptions<ApplicationOptions> applicationOptions)
     {
         _httpClientFactory = httpClientFactory;
         _tokenService = tokenService;
-        _configuration = configuration;
+        _applicationOptions = applicationOptions.Value;
         // Credentials for authentication
-        _tokenCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions{});
+        _tokenCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions());
         
         // the azure key vault client
         _client = new KeyClient(
-            new Uri(_configuration["VAULT_URI"]?? throw new InvalidOperationException("No Vault URI set")),
+            new Uri(_applicationOptions.VaultUri),
             _tokenCredential,
             new KeyClientOptions
             {
@@ -55,7 +57,7 @@ public class KeyVaultService : IKeyVaultService
         var requestBody = _tokenService.CreateBodyForRequest(transferBlob);
         var requestBodyAsJson = TokenHelper.SerializeJsonObject(requestBody);
         
-        string url = $"{_configuration["VAULT_URI"]}/keys/{name}/import?api-version=7.4";
+        var url = $"{_applicationOptions.VaultUri}/keys/{name}/import?api-version=7.4";
         
         var content = new StringContent(requestBodyAsJson, Encoding.UTF8, "application/json");
         

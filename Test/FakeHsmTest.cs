@@ -22,7 +22,7 @@ public class FakeHsmTest
         var configuration = TestHelper.CreateTestConfiguration();
         var tokenService = new TokenService(TestHelper.CreateJwtOptions(configuration));
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
-        var keyVaultService = new KeyVaultService(tokenService, httpClientFactory,configuration);
+        var keyVaultService = new KeyVaultService(tokenService, httpClientFactory, TestHelper.CreateApplicationOptions(configuration));
         
         var kekName = $"KEK-{Guid.NewGuid()}";
         var kek = await keyVaultService.GenerateKekAsync(kekName);

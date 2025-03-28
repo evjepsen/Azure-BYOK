@@ -85,6 +85,13 @@ builder.Services.AddOptions<JwtOptions>()
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
+// Configure the Key Vault options
+builder.Services.AddOptions<ApplicationOptions>()
+    .Bind(builder.Configuration.GetSection(ApplicationOptions.Application))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+
 // Authentication
 builder.Services.AddAuthentication(options =>
     {
@@ -97,8 +104,9 @@ builder.Services.AddAuthentication(options =>
         // Get the jwt options from the configuration
         var jwtOptions = builder.Configuration
             .GetSection(JwtOptions.Jwt)
-            .Get<JwtOptions>() ?? throw new ResourceNotFoundException("JWT Options not found");
+            .Get<JwtOptions>() ?? throw new ResourceNotFoundException("JWT Options was not found");
         
+        // Setup the JWT options
         options.SaveToken = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -123,11 +131,15 @@ builder.Services.AddAuthentication(options =>
     })
     .AddOpenIdConnect("MicrosoftAuth", options =>
     {
+        // Get the microsoft options from the configuration
+        var microsoftAuthOptions = builder.Configuration
+            .GetSection(AuthenticationOptions.Microsoft)
+            .Get<AuthenticationOptions>() ?? throw new ResourceNotFoundException("Microsoft Options was not found");
+        
+        // Set up the Microsoft options
         options.Authority = "https://login.microsoftonline.com/common/v2.0";
-        options.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"] ??
-                           throw new InvalidOperationException("Microsoft Client ID missing");
-        options.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"] ??
-                               throw new InvalidOperationException("Microsoft Client Secret missing");
+        options.ClientId = microsoftAuthOptions.ClientId;
+        options.ClientSecret = microsoftAuthOptions.ClientSecret;
         
         options.ResponseType = "code";
         options.UsePkce = true;
@@ -143,11 +155,14 @@ builder.Services.AddAuthentication(options =>
     })
     .AddGoogleOpenIdConnect(GoogleOpenIdConnectDefaults.AuthenticationScheme, options =>
     {
-        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ??
-                           throw new InvalidOperationException("Google Client ID missing");
-        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ??
-                               throw new InvalidOperationException("Google Client Secret missing");
+        // Get the Google options from the configuration
+        var googleAuthOptions = builder.Configuration
+            .GetSection(AuthenticationOptions.Google)
+            .Get<AuthenticationOptions>() ?? throw new ResourceNotFoundException("Google Options was not found");
         
+        // Set up the Google options
+        options.ClientId = googleAuthOptions.ClientId;
+        options.ClientSecret = googleAuthOptions.ClientSecret;
         options.CallbackPath = new PathString("/signin-google");
     });
 
@@ -157,20 +172,14 @@ builder.Services.AddAuthorizationBuilder()
         policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
         policy.RequireAuthenticatedUser();
         
-        var validEmails = builder
-            .Configuration
-            .GetSection("AllowedEmails")
-            .Get<string []>();
-        
-        if (validEmails == null || validEmails.Length == 0)
-        {
-            throw new InvalidConfigurationException("No valid emails found in configuration");
-        }
+        var applicationOptions = builder.Configuration
+            .GetSection(ApplicationOptions.Application)
+            .Get<ApplicationOptions>() ?? throw new ResourceNotFoundException("Application options was not found");
         
         policy.RequireAssertion(context =>
         {
             var email = context.User.FindFirst(ClaimTypes.Email);
-            return email != null && validEmails.Contains(email.Value);
+            return email != null && applicationOptions.AllowedEmails.Contains(email.Value);
         });
     });
 

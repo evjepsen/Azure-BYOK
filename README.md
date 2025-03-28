@@ -12,9 +12,13 @@ az login
 
 
 ### Set environment variables
-You have to setup the following enviroment variables:
+You have to set up the following variables:
 
-- `VAULT_URI`
+- `VaultUri`
+- `SubscriptionId`
+- `ResourceGroupName`
+- `KeyVaultResourceName`
+- `AllowedEmails`
 
 They are read from the appsettings.azure.json, so you have create one in the `API` directory
 
@@ -22,10 +26,16 @@ Example ´appsettings.azure.json´ file:
 
 ```json
 {
-  "VAULT_URI" : "https://xxx.vault.azure.net/",
-  "SUBSCRIPTION_ID" : "x",
-  "RESOURCE_GROUP_NAME" : "x",
-  "KV_RESOURCE_NAME" : "x"
+  "ApplicationOptions" : {
+    "VaultUri" : "https://xxx.vault.azure.net/",
+    "SubscriptionId" : "xxx-xxx-xxx-xxx",
+    "ResourceGroupName" : "xxx",
+    "KeyVaultResourceName" : "xxx",
+    "AllowedEmails": [
+      "john.doe@gmail.com",
+      "kahn@example.com"
+    ]
+  }
 }
 ```
 
