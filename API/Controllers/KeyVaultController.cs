@@ -17,14 +17,17 @@ public class KeyVaultController : Controller
 {
     private readonly IKeyVaultService _keyVaultService;
     private readonly IAlertService _alertService;
+    private readonly IKeyVaultManagementService _keyVaultManagementService;
 
     /// <summary>
     /// The constructor for the controller
     /// </summary>
     /// <param name="keyVaultService">The key vault service used to interact with the Azure Key Vault</param>
     /// <param name="alertService">The alert service used to interact with the Azure Alert System</param>
-    public KeyVaultController(IKeyVaultService keyVaultService, IAlertService alertService)
+    /// <param name="keyVaultManagementService">The key vault management service used to interact with key vault settings</param>
+    public KeyVaultController(IKeyVaultService keyVaultService, IAlertService alertService, IKeyVaultManagementService keyVaultManagementService)
     {
+        _keyVaultManagementService = keyVaultManagementService;
         _keyVaultService = keyVaultService;
         _alertService = alertService;
     }
@@ -138,5 +141,69 @@ public class KeyVaultController : Controller
             return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
         }
     }
+
+    /// <summary>
+    /// Deletes a Key Encryption Key
+    /// </summary>
+    /// <param name="kekName"></param>
+    /// <response code="200">Key was deleted</response>
+    /// <response code="404">Key not found</response>
+    /// <response code="400">Bad request. See the error code for details</response>
+    /// <response code="500">Internal server error</response>
+    [HttpDelete("delete/{kekName}")]
+    public async Task<IActionResult> DeleteKeyEncryptionKey(string kekName)
+    {
+        try
+        {
+            var response = await _keyVaultService.DeleteKekAsync(kekName); 
+            return Ok(response);
+        }
+        catch (RequestFailedException e)
+        {
+            return StatusCode(e.Status, e.ErrorCode);
+        }
+        catch (Exception)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+    }
+    
+    /// <summary>
+    /// Purge a deleted key
+    /// </summary>
+    /// <param name="kekName"></param>
+    /// <response code="204">Deleted Key was purged</response>
+    /// <response code="404">Key not found</response>
+    /// <response code="400">Bad request. See the error code for details</response>
+    /// <response code="500">Internal server error</response>
+    [HttpDelete("purgeDeletedKey/{kekName}")]
+    public async Task<IActionResult> PurgeDeletedKeyEncryptionKey(string kekName)
+    {
+        try
+        {
+            var doesKeyVaultHavePurgeProtection = _keyVaultManagementService.DoesKeyVaultHavePurgeProtection();
+            if (doesKeyVaultHavePurgeProtection)
+            {
+                return BadRequest("Purge protection is enabled on your vault");
+            }
+            
+            // Try to complete the purge operation
+            var response = await _keyVaultService.PurgeDeletedKekAsync(kekName);
+            return StatusCode(response.Status);
+        }
+        catch (OperationCanceledException)
+        {
+            return StatusCode(StatusCodes.Status408RequestTimeout, "The operation was timed out.");
+        }
+        catch (RequestFailedException e)
+        {
+            return StatusCode(e.Status, e.ErrorCode);
+        }
+        catch (Exception)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+    }
+    
     
 }

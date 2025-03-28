@@ -31,4 +31,18 @@ public interface IKeyVaultService
     /// <param name="kekId">id of the KEK</param>
     /// <returns>A public key in pem format</returns>
     public Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekId);
+
+
+    /// <summary>
+    /// Asynchronously delete a key encryption key
+    /// </summary>
+    /// <param name="kekId"></param>
+    /// <returns> The response message</returns>
+    public Task<DeletedKey> DeleteKekAsync(string kekId);
+    /// <summary>
+    /// Purge a deleted key
+    /// </summary>
+    /// <param name="kekId"></param>
+    /// <returns> The response message </returns>
+    public Task<Response> PurgeDeletedKekAsync(string kekId);
 }

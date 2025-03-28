@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Azure;
 using Azure.Core;
 using Azure.Core.Pipeline;
 using Azure.Identity;
@@ -123,4 +124,24 @@ public class KeyVaultService : IKeyVaultService
         var pem = key.ToRSA().ExportRSAPublicKeyPem();
         return new PublicKeyKekPem{PemString = pem};
     }
+    public async Task<DeletedKey> DeleteKekAsync(string kekId)
+    {
+        var deleteKeyOperationAsync = await _client.StartDeleteKeyAsync(kekId);
+        var res = await deleteKeyOperationAsync.WaitForCompletionAsync();
+        
+        if (!res.HasValue)
+        {
+            throw new HttpRequestException("Failed to delete the key");
+        }
+        
+        return res.Value;
+    }
+    
+    public async Task<Response> PurgeDeletedKekAsync(string kekId)
+    {
+        var purgeOperation = await _client.PurgeDeletedKeyAsync(kekId);
+        
+        return purgeOperation;
+    }
+    
 }
