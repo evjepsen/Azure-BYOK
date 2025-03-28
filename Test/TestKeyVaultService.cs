@@ -16,9 +16,9 @@ public class TestKeyVaultService
     public void Setup()
     {
         TestHelper.CreateTestConfiguration();
-        _tokenService = new TokenService();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
         _configuration = TestHelper.CreateTestConfiguration();
+        _tokenService = new TokenService(_configuration);
         _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory,_configuration);
     }
 

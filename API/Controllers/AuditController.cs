@@ -1,4 +1,6 @@
 using Infrastructure.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
@@ -6,6 +8,7 @@ namespace API.Controllers;
 /// <summary>
 /// Controller to audit the operations performed on the Azure Vault instance and keys stored in it
 /// </summary>
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = "ShouldBeAllowedEmail")]
 [Route("[controller]")]
 public class AuditController : Controller
 {
