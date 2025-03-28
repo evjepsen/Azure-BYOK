@@ -118,18 +118,23 @@ public class KeyVaultService : IKeyVaultService
         var pem = key.ToRSA().ExportRSAPublicKeyPem();
         return new PublicKeyKekPem{PemString = pem};
     }
-    public async Task<DeleteKeyOperation> DeleteKekAsync(string kekId)
+    public async Task<DeletedKey> DeleteKekAsync(string kekId)
     {
-        DeleteKeyOperation deleteKeyOperationAsync = await _client.StartDeleteKeyAsync(kekId);
-        deleteKeyOperationAsync.WaitForCompletion();
+        var deleteKeyOperationAsync = await _client.StartDeleteKeyAsync(kekId);
+        var res = await deleteKeyOperationAsync.WaitForCompletionAsync();
         
-        return deleteKeyOperationAsync;
+        if (!res.HasValue)
+        {
+            throw new HttpRequestException("Failed to delete the key");
+        }
+        
+        return res.Value;
     }
     
     public async Task<Response> PurgeDeletedKekAsync(string kekId)
     {
         var purgeOperation = await _client.PurgeDeletedKeyAsync(kekId);
-
+        
         return purgeOperation;
     }
     

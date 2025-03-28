@@ -13,8 +13,6 @@ public class TestKeyVaultService
     private KeyVaultService _keyVaultService;
     private IConfiguration _configuration; 
     private KeyVaultManagementService _keyVaultManagementService;
-
-
     
     [SetUp]
     public void Setup()
@@ -84,13 +82,11 @@ public class TestKeyVaultService
         
         // When I ask to delete it
         var delOp = await _keyVaultService.DeleteKekAsync(kekName);
-        await delOp.WaitForCompletionAsync();
         
-        // Then it should be deleted
-        Assert.That(delOp.HasCompleted, Is.True);
-        // and the key should be the same
-        Assert.That(delOp.Value.Id, Is.EqualTo(kek.Id));
+        // Then it should be deleted and the key should be the same
+        Assert.That(delOp.Properties.Id, Is.EqualTo(kek.Id));
     }
+    
     [Test]
     public async Task ShouldAbleToPurgeADeletedKek()
     {
@@ -99,24 +95,19 @@ public class TestKeyVaultService
         await _keyVaultService.GenerateKekAsync(kekName);
         
         // Which I delete
-        var deleteKeyOperation = await _keyVaultService.DeleteKekAsync(kekName);
-        await deleteKeyOperation.WaitForCompletionAsync();
+        await _keyVaultService.DeleteKekAsync(kekName);
         
         // When I ask to purge it
-        var purgeKekOperation = await _keyVaultService.PurgeDeletedKekAsync(kekName);
         // Then it should be purged if the key vault has purge protection
-        if (!await _keyVaultManagementService.DoesKeyVaultHavePurgeProtectionAsync())
+        if (!_keyVaultManagementService.DoesKeyVaultHavePurgeProtection())
         {
-            Assert.That(prugeKekOperation.Status, Is.EqualTo(204));
+            var purgeKekOperation = await _keyVaultService.PurgeDeletedKekAsync(kekName);
+            Assert.That(purgeKekOperation.Status, Is.EqualTo(204));
         }
-        // Otherwise, purging is not possible and the status should be xxx 
-        // and the message wil indicate that purging is not possible
-        // per https://learn.microsoft.com/en-us/dotnet/api/azure.security.keyvault.keys.keyclient.purgedeletedkeyasync?view=azure-dotnet&viewFallbackFrom=netstandard-2.0
+        // Otherwise, purging is not possible and an exception should be thrown 
         else
         {
-            Assert.That(prugeKekOperation.Status, Is.EqualTo(204));
+            Assert.ThrowsAsync<Azure.RequestFailedException>(async () => await _keyVaultService.PurgeDeletedKekAsync(kekName));
         }
-        
-        
     }
 }

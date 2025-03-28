@@ -13,7 +13,6 @@
         <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.1" />
         <PackageReference Include="coverlet.collector" Version="6.0.0"/>
         <PackageReference Include="DotNetEnv" Version="3.1.1" />
-        <PackageReference Include="Microsoft.Azure.Management.KeyVault" Version="4.0.0-preview.1" />
         <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0-preview.1.25080.5" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0-preview.1.25080.5" />
         <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.3" />
@@ -32,11 +31,6 @@
     </ItemGroup>
     <ItemGroup>
         <Content Include="..\API\appsettings.azure.json" CopyToOutputDirectory="PreserveNewest" />
-    </ItemGroup>
-    <ItemGroup>
-      <Reference Include="Microsoft.AspNetCore.Http.Results">
-        <HintPath>..\..\..\.nuget\packages\microsoft.aspnetcore.app.ref\8.0.14\ref\net8.0\Microsoft.AspNetCore.Http.Results.dll</HintPath>
-      </Reference>
     </ItemGroup>
 
 </Project>

@@ -46,12 +46,11 @@ public class TestTokenService
         var requestBody = _tokenService.CreateBodyForRequest(keyTransferBlob);
         // Then it should be well-formed 
         Assert.IsNotEmpty(requestBody.Key.KeyHsm);
+        Assert.That(requestBody.Key.KeyOps, Is.Not.Empty);
         Assert.True(requestBody.Key.KeyOps.Contains("encrypt"));
         Assert.True(requestBody.Key.KeyOps.Contains("decrypt"));
         Assert.That(requestBody.Key.Kty, Is.EqualTo("RSA-HSM"));
         Assert.That(requestBody.Attributes.Enabled, Is.True);
 
     }
-    
-    
 }

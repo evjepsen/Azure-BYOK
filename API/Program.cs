@@ -28,9 +28,9 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IKeyVaultService, KeyVaultService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
-// Not needed at this point
-// builder.Services.AddScoped<IKeyVaultManagementService, KeyVaultManagementService>();
+builder.Services.AddScoped<IKeyVaultManagementService, KeyVaultManagementService>();
 
+// Polly http client factory
 builder.Services.AddHttpClient("WaitAndRetry")
     .AddTransientHttpErrorPolicy(policyBuilder =>
         policyBuilder.WaitAndRetryAsync(

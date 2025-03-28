@@ -38,7 +38,7 @@ public interface IKeyVaultService
     /// </summary>
     /// <param name="kekId"></param>
     /// <returns> The response message</returns>
-    public Task<DeleteKeyOperation> DeleteKekAsync(string kekId);
+    public Task<DeletedKey> DeleteKekAsync(string kekId);
     /// <summary>
     /// Purge a deleted key
     /// </summary>

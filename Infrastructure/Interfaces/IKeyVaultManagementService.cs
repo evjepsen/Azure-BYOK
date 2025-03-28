@@ -10,6 +10,6 @@ public interface IKeyVaultManagementService
     /// Method to check if the Key Vault has purge protection enabled
     /// </summary>
     /// <returns> Returns true if and only if the Key Vault has purge protection enabled, false otherwise </returns>
-    public Task<bool> DoesKeyVaultHavePurgeProtectionAsync();
+    public bool DoesKeyVaultHavePurgeProtection();
 
 }

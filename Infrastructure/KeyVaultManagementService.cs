@@ -1,50 +1,51 @@
 using Azure.Core;
 using Azure.Identity;
+using Azure.ResourceManager;
+using Azure.ResourceManager.KeyVault;
+using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
-using Microsoft.Azure.Management.KeyVault;
-using Microsoft.Azure.Management.KeyVault.Models;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Rest;
 
 namespace Infrastructure;
 
 public class KeyVaultManagementService : IKeyVaultManagementService
 {
-    private readonly IConfiguration _configuration;
-    private readonly KeyVaultManagementClient _keyVaultManagementClient;
+    private readonly KeyVaultResource _keyVaultResource;
     
-    // public KeyVaultService(ITokenService tokenService, IHttpClientFactory httpClientFactory, IConfiguration configuration)
     public KeyVaultManagementService(IConfiguration configuration)
     {
-        _configuration = configuration;
+        var subscriptionId =    configuration["SUBSCRIPTION_ID"] ?? throw new EnvironmentVariableNotSetException("The Subscription Id was not set");
+        var resourceGroupName = configuration["RESOURCE_GROUP_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Group Name was not set");
+        var keyVaultResourceName = configuration["KV_RESOURCE_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Name was not set");
+        
         // Get management token.
-        var tokenCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions());
-        var tokenRequestContext = new TokenRequestContext(["https://management.azure.com/.default"]);
-        var accessToken = tokenCredential.GetToken(tokenRequestContext);
-        // Create ServiceClientCredentials credentials.
-        ServiceClientCredentials credentials = new TokenCredentials(accessToken.Token);
-
-        // Create KeyVaultManagementClient 
-        _keyVaultManagementClient = new KeyVaultManagementClient(credentials);
-        // and set the subscription id.
-        _keyVaultManagementClient.SubscriptionId = configuration["SUBSCRIPTION_ID"];
-    }
-    public async Task<bool> DoesKeyVaultHavePurgeProtectionAsync()
-    {
-        // Retrieve the Key Vault
-        var vault = await _keyVaultManagementClient.Vaults.GetAsync(
-            _configuration["RESOURCE_GROUP_NAME"], 
-            _configuration["KV_RESOURCE_NAME"]
-        );
-
-        if (vault == null)
+        var credential = new DefaultAzureCredential();
+        var armClient = new ArmClient(credential);
+        var subscriptionIdentifier = new ResourceIdentifier($"/subscriptions/{subscriptionId}");
+        
+        // Get the Key Vault Management client.
+        var resourceGroupResponse = armClient
+            .GetSubscriptionResource(subscriptionIdentifier)
+            .GetResourceGroup(resourceGroupName);
+        
+        if (!resourceGroupResponse.HasValue)
         {
-            // Return false if the vault is not found.
-            return false;
+            throw new ResourceNotFoundException($"Resource group '{resourceGroupName}' not found in subscription '{subscriptionId}'");
         }
         
-        // Return true if the property: EnablePurgeProtection is found and is true.
-        return vault.Properties.EnablePurgeProtection.HasValue &&
-               vault.Properties.EnablePurgeProtection.Value;
+        var keyVaultResponse = resourceGroupResponse.Value.GetKeyVault(keyVaultResourceName);
+        
+        // Check that the key vault exists
+        if (!keyVaultResponse.HasValue)
+        {
+            throw new ResourceNotFoundException($"Key Vault '{keyVaultResourceName}' not found in resource group '{resourceGroupName}'");
+        }
+        
+        _keyVaultResource = keyVaultResponse.Value;
+    }
+
+    public bool DoesKeyVaultHavePurgeProtection()
+    {
+        return _keyVaultResource.Data.Properties.EnablePurgeProtection.GetValueOrDefault(false);
     }
 }

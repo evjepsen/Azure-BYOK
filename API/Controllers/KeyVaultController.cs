@@ -14,14 +14,17 @@ public class KeyVaultController : Controller
 {
     private readonly IKeyVaultService _keyVaultService;
     private readonly IAlertService _alertService;
+    private readonly IKeyVaultManagementService _keyVaultManagementService;
 
     /// <summary>
     /// The constructor for the controller
     /// </summary>
     /// <param name="keyVaultService">The key vault service used to interact with the Azure Key Vault</param>
     /// <param name="alertService">The alert service used to interact with the Azure Alert System</param>
-    public KeyVaultController(IKeyVaultService keyVaultService, IAlertService alertService)
+    /// <param name="keyVaultManagementService">The key vault management service used to interact with key vault settings</param>
+    public KeyVaultController(IKeyVaultService keyVaultService, IAlertService alertService, IKeyVaultManagementService keyVaultManagementService)
     {
+        _keyVaultManagementService = keyVaultManagementService;
         _keyVaultService = keyVaultService;
         _alertService = alertService;
     }
@@ -173,10 +176,17 @@ public class KeyVaultController : Controller
     {
         try
         {
+            var doesKeyVaultHavePurgeProtection = _keyVaultManagementService.DoesKeyVaultHavePurgeProtection();
+            if (doesKeyVaultHavePurgeProtection)
+            {
+                return BadRequest("Purge protection is enabled on your vault");
+            }
+            
+            // Try to complete the purge operation
             var response = await _keyVaultService.PurgeDeletedKekAsync(kekName);
             return StatusCode(response.Status);
         }
-        catch (OperationCanceledException e)
+        catch (OperationCanceledException)
         {
             return StatusCode(StatusCodes.Status408RequestTimeout, "The operation was timed out.");
         }
