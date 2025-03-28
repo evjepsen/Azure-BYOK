@@ -5,15 +5,17 @@ using Infrastructure.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 using Infrastructure.Helpers;
 using Infrastructure.Models;
+using Infrastructure.Options;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure;
 
 public class TokenService : ITokenService
 {
-    private readonly IConfiguration _configuration;
+    private readonly IOptions<JwtOptions> _configuration;
 
-    public TokenService(IConfiguration configuration)
+    public TokenService(IOptions<JwtOptions> configuration)
     {
         _configuration = configuration;
     }
@@ -66,13 +68,13 @@ public class TokenService : ITokenService
     {
         var jwtTokenHandler = new JwtSecurityTokenHandler();
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-            _configuration["Jwt:Secret"] ?? throw new InvalidOperationException("Missing JWT Secret"))
+            _configuration.Value.Secret)
         );
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
+            issuer: _configuration.Value.Issuer,
+            audience: _configuration.Value.Audience,
             claims: claims,
             expires: DateTime.Now.AddHours(1),
             signingCredentials: credentials

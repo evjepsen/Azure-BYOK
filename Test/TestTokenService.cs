@@ -18,7 +18,7 @@ public class TestTokenService
     {
         TestHelper.CreateTestConfiguration();
         var configuration = TestHelper.CreateTestConfiguration();
-        _tokenService = new TokenService(configuration);
+        _tokenService = new TokenService(TestHelper.CreateJwtOptions(configuration));
         _configuration = TestHelper.CreateTestConfiguration();
     }
     

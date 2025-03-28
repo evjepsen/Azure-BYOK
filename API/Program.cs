@@ -3,7 +3,9 @@ using System.Security.Claims;
 using System.Text;
 using Google.Apis.Auth.AspNetCore3;
 using Infrastructure;
+using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
+using Infrastructure.Options;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -77,6 +79,12 @@ builder.Configuration
     .AddEnvironmentVariables()
     .Build();
 
+// Configure the JWT options
+builder.Services.AddOptions<JwtOptions>()
+    .Bind(builder.Configuration.GetSection(JwtOptions.Jwt))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
 // Authentication
 builder.Services.AddAuthentication(options =>
     {
@@ -86,6 +94,11 @@ builder.Services.AddAuthentication(options =>
     })
     .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
+        // Get the jwt options from the configuration
+        var jwtOptions = builder.Configuration
+            .GetSection(JwtOptions.Jwt)
+            .Get<JwtOptions>() ?? throw new ResourceNotFoundException("JWT Options not found");
+        
         options.SaveToken = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -93,11 +106,10 @@ builder.Services.AddAuthentication(options =>
             ValidateLifetime = true,
             ValidateAudience = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"] 
-                                       ?? throw new InvalidOperationException("Missing JWT Secret"))
+                Encoding.UTF8.GetBytes(jwtOptions.Secret)
             ),
             RequireExpirationTime = true
         };

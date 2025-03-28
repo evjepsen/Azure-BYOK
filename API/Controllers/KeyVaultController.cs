@@ -1,5 +1,4 @@
 using API.Models;
-using Azure.ResourceManager.Monitor;
 using Azure;
 using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;

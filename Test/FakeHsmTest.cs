@@ -20,7 +20,7 @@ public class FakeHsmTest
     public async Task ShouldBlobBeGenerated()
     {
         var configuration = TestHelper.CreateTestConfiguration();
-        var tokenService = new TokenService(configuration);
+        var tokenService = new TokenService(TestHelper.CreateJwtOptions(configuration));
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
         var keyVaultService = new KeyVaultService(tokenService, httpClientFactory,configuration);
         
