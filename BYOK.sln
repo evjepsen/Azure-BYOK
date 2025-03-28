@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API", "API\API.csproj", "{9133627C-6D34-42A9-AE18-208959DDF66E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FakeHSM", "FakeHSM\FakeHSM.csproj", "{B3B4D5AF-1153-4BA1-9BA5-32C5E720741D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{9133627C-6D34-42A9-AE18-208959DDF66E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9133627C-6D34-42A9-AE18-208959DDF66E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9133627C-6D34-42A9-AE18-208959DDF66E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B3B4D5AF-1153-4BA1-9BA5-32C5E720741D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B3B4D5AF-1153-4BA1-9BA5-32C5E720741D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B3B4D5AF-1153-4BA1-9BA5-32C5E720741D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B3B4D5AF-1153-4BA1-9BA5-32C5E720741D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

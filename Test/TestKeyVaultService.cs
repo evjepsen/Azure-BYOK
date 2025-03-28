@@ -44,11 +44,12 @@ public class TestKeyVaultService
         // Given a Key Encryption Key and transfer blob
         var kekName = $"KEK-{Guid.NewGuid()}";
         var kek = await _keyVaultService.GenerateKekAsync(kekName);
-        var transferBlob = FakeHsm.SimulateHsm(kek);
+        var hsm = new FakeHSM.FakeHsm();
+        var encryptedKek = hsm.GeneratePrivateKeyForBlob(kek.Key.ToRSA());
         var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
         
         // When is ask to upload it
-        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlob, kek.Id.ToString());
+        var kvRes = await _keyVaultService.UploadKey(newKeyName, encryptedKek, kek.Id.ToString());
         
         // Then it should be successful
         Assert.That(kvRes.Attributes.Enabled, Is.True);
