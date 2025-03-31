@@ -145,5 +145,29 @@ public class KeyVaultService : IKeyVaultService
         
         return purgeOperation;
     }
-    
+
+    public async Task<RecoverDeletedKeyOperation> RecoverDeletedKekAsync(string kekId)
+    {
+        var recoverOperation = await _client.StartRecoverDeletedKeyAsync(kekId);
+        var res = await recoverOperation.WaitForCompletionAsync();
+        
+        if (!res.HasValue)
+        {
+            throw new HttpRequestException("Failed to delete the key");
+        }
+        
+        return recoverOperation;
+    }
+
+    public async Task<KeyVaultKey> RotateKekAsync(string kekId)
+    {
+        var rotateOperation = await _client.RotateKeyAsync(kekId);
+        
+        if (!rotateOperation.HasValue)
+        {
+            throw new HttpRequestException("Failed to rotate the key");
+        }
+        
+        return rotateOperation.Value;
+    }
 }

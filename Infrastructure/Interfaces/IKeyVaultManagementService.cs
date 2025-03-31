@@ -11,5 +11,10 @@ public interface IKeyVaultManagementService
     /// </summary>
     /// <returns> Returns true if and only if the Key Vault has purge protection enabled, false otherwise </returns>
     public bool DoesKeyVaultHavePurgeProtection();
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <returns></returns>
+    public bool DoesKeyVaultHaveSoftDeleteEnabled();
 
 }

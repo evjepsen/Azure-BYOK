@@ -168,7 +168,7 @@ public class KeyVaultController : Controller
     }
     
     /// <summary>
-    /// Purge a deleted key
+    /// Purge a deleted key encryption key
     /// </summary>
     /// <param name="kekName"></param>
     /// <response code="204">Deleted Key was purged</response>
@@ -204,5 +204,61 @@ public class KeyVaultController : Controller
         }
     }
     
+    /// <summary>
+    /// Recover a deleted key encryption key
+    /// </summary>
+    /// <param name="kekName"></param>
+    /// <response code="200">Deleted Key was recovered</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="404">Key not found</response>
+    /// <response code="500">Internal server error</response>
+    [HttpPost("recoverDeletedKey/{kekName}")]
+    public async Task<IActionResult> RecoverDeletedKeyEncryptionKey(string kekName)
+    {
+        try
+        {
+            // Check if the key vault is enabled for soft delete
+            var doesKeyVaultHaveSoftDelete = _keyVaultManagementService.DoesKeyVaultHaveSoftDeleteEnabled();
+            if (!doesKeyVaultHaveSoftDelete)
+            {
+                return BadRequest("The key vault is not enabled for soft delete");
+            }
+            var response = await _keyVaultService.RecoverDeletedKekAsync(kekName);
+            return Ok(response);
+        }
+        catch (RequestFailedException e)
+        {
+            return StatusCode(e.Status, e.ErrorCode);
+        }
+        catch (Exception)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+    }
     
+    /// <summary>
+    /// Rotate a key encryption key
+    /// </summary>
+    /// <param name="kekName"></param>
+    /// <response code="200">Key was rotated</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="404">Key not found</response>
+    /// <response code="500">Internal server error</response>
+    [HttpPost("rotate/{kekName}")]
+    public async Task<IActionResult> RotateKeyEncryptionKey(string kekName)
+    {
+        try
+        {
+            var response = await _keyVaultService.RotateKekAsync(kekName);
+            return Ok(response);
+        }
+        catch (RequestFailedException e)
+        {
+            return StatusCode(e.Status, e.ErrorCode);
+        }
+        catch (Exception)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+    }
 }

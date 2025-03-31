@@ -50,4 +50,9 @@ public class KeyVaultManagementService : IKeyVaultManagementService
     {
         return _keyVaultResource.Data.Properties.EnablePurgeProtection.GetValueOrDefault(false);
     }
+
+    public bool DoesKeyVaultHaveSoftDeleteEnabled()
+    {
+        return _keyVaultResource.Data.Properties.EnableSoftDelete.GetValueOrDefault(true);
+    }
 }

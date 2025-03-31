@@ -110,4 +110,39 @@ public class TestKeyVaultService
             Assert.ThrowsAsync<Azure.RequestFailedException>(async () => await _keyVaultService.PurgeDeletedKekAsync(kekName));
         }
     }
+    
+    [Test]
+    public async Task ShouldBeAbleToRecoverADeletedKek()
+    {
+        // Given a Key Encryption Key
+        var kekName = $"Random-recover-{Guid.NewGuid()}";
+        await _keyVaultService.GenerateKekAsync(kekName);
+        
+        // Which I delete
+        await _keyVaultService.DeleteKekAsync(kekName);
+        
+        // When I ask to recover it
+        var recoverOp = await _keyVaultService.RecoverDeletedKekAsync(kekName);
+        
+        // Then it should be recovered and the operation should be completed
+        Assert.That(recoverOp.HasCompleted, Is.EqualTo(true));
+    }
+    
+    [Test]
+    public async Task ShouldBeAbleToRotateAKek()
+    {
+        // Given a Key Encryption Key
+        var kekName = $"Random-rotate-{Guid.NewGuid()}";
+        var kek = await _keyVaultService.GenerateKekAsync(kekName);
+        
+        // When I ask to rotate it
+        var rotatedKek = await _keyVaultService.RotateKekAsync(kekName);
+        Assert.Multiple(() =>
+        {
+            // Then it should be rotated and the name of the key should be the same
+            Assert.That(rotatedKek.Name, Is.EqualTo(kek.Name));
+            // but the versions should be different
+            Assert.That(rotatedKek.Properties.Version, Is.Not.EqualTo(kek.Properties.Version));
+        });
+    }
 }
