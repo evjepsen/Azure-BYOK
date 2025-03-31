@@ -14,7 +14,7 @@ public interface IKeyVaultManagementService
     /// <summary>
     /// Method to check if the Key Vault has soft delete enabled
     /// </summary>
-    /// <returns>Returns true if anf only if the Key vault has soft delete enabled, false otherwise</returns>
+    /// <returns>Returns true if and only if the Key vault has soft delete enabled, false otherwise</returns>
     public bool DoesKeyVaultHaveSoftDeleteEnabled();
 
 }
