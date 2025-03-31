@@ -1,6 +1,7 @@
 using Infrastructure;
 using Infrastructure.Interfaces;
 using Infrastructure.Options;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Test.TestHelpers;
 
@@ -16,7 +17,7 @@ public class TestAuditService
         var configuration = TestHelper.CreateTestConfiguration();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
         var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
-        _auditService = new AuditService(applicationOptions, httpClientFactory);
+        _auditService = new AuditService(applicationOptions, httpClientFactory, new NullLoggerFactory());
     }
 
     [Test]

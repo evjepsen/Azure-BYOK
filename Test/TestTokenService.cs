@@ -4,6 +4,7 @@ using Infrastructure;
 using Infrastructure.Interfaces;
 using Infrastructure.Options;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using Test.TestHelpers;
 
@@ -20,7 +21,7 @@ public class TestTokenService
         TestHelper.CreateTestConfiguration();
         var configuration = TestHelper.CreateTestConfiguration();
         var jwtOptions = TestHelper.CreateJwtOptions(configuration);
-        _tokenService = new TokenService(jwtOptions);
+        _tokenService = new TokenService(jwtOptions, new NullLoggerFactory());
         _jwtOptions = jwtOptions.Value;
     }
     

@@ -2,6 +2,7 @@ using Azure.ResourceManager.Monitor.Models;
 using Infrastructure;
 using Infrastructure.Interfaces;
 using Infrastructure.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 using Test.TestHelpers;
 
 namespace Test;
@@ -16,7 +17,7 @@ public class TestAlertService
         var configuration = TestHelper.CreateTestConfiguration();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
         var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
-        _alertService = new AlertService(httpClientFactory, applicationOptions);
+        _alertService = new AlertService(httpClientFactory, applicationOptions, new NullLoggerFactory());
     }
 
     [Test]
