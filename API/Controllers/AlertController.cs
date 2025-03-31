@@ -1,3 +1,4 @@
+using Azure;
 using Infrastructure.Interfaces;
 using Infrastructure.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -14,13 +15,16 @@ namespace API.Controllers;
 public class AlertController : Controller
 {
     private readonly IAlertService _alertService;
+    private readonly ILogger<AlertController> _logger;
 
     /// <summary>
     /// The constructor for the controller
     /// </summary>
     /// <param name="alertService">The alert service used to handle alerts and action groups</param>
-    public AlertController(IAlertService alertService)
+    /// <param name="loggerFactory">The logger factory for the alert controller</param>
+    public AlertController(IAlertService alertService, ILoggerFactory loggerFactory)
     {
+        _logger = loggerFactory.CreateLogger<AlertController>();
         _alertService = alertService;
     }
     
@@ -39,15 +43,18 @@ public class AlertController : Controller
     {
         try
         {
+            _logger.LogInformation("Getting action group {name}", name);
             var res = await _alertService.GetActionGroupAsync(name);
             return Ok(res); 
         }
-        catch (Azure.RequestFailedException e)
+        catch (RequestFailedException e)
         {
+            _logger.LogError("Azure failed to get action group {name}: {e}", name, e.Message);
             return StatusCode(e.Status, e.ErrorCode);
         }
         catch (Exception)
         {
+            _logger.LogError("An unexpected error occured when getting action group {name}", name);
             return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
         }
   
@@ -68,15 +75,18 @@ public class AlertController : Controller
     {
         try
         {
+            _logger.LogInformation("Creating action group {name}", name);
             var res = await _alertService.CreateActionGroupAsync(name, receivers);
             return Ok(res);
         }
-        catch (Azure.RequestFailedException e)
+        catch (RequestFailedException e)
         {
+            _logger.LogError("Azure failed to create action group {name}: {errorMessage}", name, e.Message);
             return StatusCode(e.Status, e.ErrorCode);
         }
         catch (Exception)
         {
+            _logger.LogError("An unexpected error occured when creating action group {name}", name);
             return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
         }
     }
@@ -97,21 +107,25 @@ public class AlertController : Controller
         // Check that the user has specified at least one action group
         if (actionGroups.Count == 0)
         {
+            _logger.LogError("No action groups specified for alert {name}", name);
             return BadRequest("Must specify a least one action group");
         }
         
         // try to create the new key vault alert
         try
         {
+            _logger.LogInformation("Creating key vault activity alert {name}", name);
             var alert = await _alertService.CreateAlertForKeyVaultAsync(name, actionGroups);
             return Ok(alert);
         }
-        catch (Azure.RequestFailedException e)
+        catch (RequestFailedException e)
         {
+            _logger.LogError("Azure failed to create key vault alert {name}: {errorMessage}", name, e.Message);
             return StatusCode(e.Status, e.ErrorCode);
         }
         catch (Exception)
         {
+            _logger.LogError("An unexpected error occured when creating key vault alert {name}", name);
             return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
         }
     }

@@ -1,5 +1,6 @@
 using FakeHSM.Interfaces;
 using Infrastructure;
+using Microsoft.Extensions.Logging.Abstractions;
 using Test.TestHelpers;
 using FakeHsm = FakeHSM.FakeHsm;
 
@@ -20,9 +21,9 @@ public class FakeHsmTest
     public async Task ShouldBlobBeGenerated()
     {
         var configuration = TestHelper.CreateTestConfiguration();
-        var tokenService = new TokenService(TestHelper.CreateJwtOptions(configuration));
+        var tokenService = new TokenService(TestHelper.CreateJwtOptions(configuration), new NullLoggerFactory());
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
-        var keyVaultService = new KeyVaultService(tokenService, httpClientFactory, TestHelper.CreateApplicationOptions(configuration));
+        var keyVaultService = new KeyVaultService(tokenService, httpClientFactory, TestHelper.CreateApplicationOptions(configuration), new NullLoggerFactory());
         
         var kekName = $"KEK-{Guid.NewGuid()}";
         var kek = await keyVaultService.GenerateKekAsync(kekName);
