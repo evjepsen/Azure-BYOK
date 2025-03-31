@@ -1,11 +1,11 @@
 using Infrastructure;
 using Infrastructure.Interfaces;
-using Infrastructure.Options;
-using Microsoft.Extensions.Options;
 using Test.TestHelpers;
 
 namespace Test;
 
+[TestFixture]
+[TestOf(typeof(AuditService))]
 public class TestAuditService
 {
     private IAuditService _auditService;

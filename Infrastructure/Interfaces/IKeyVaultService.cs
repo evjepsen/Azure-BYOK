@@ -13,10 +13,9 @@ public interface IKeyVaultService
     /// Upload the customer BYOK TDE protector
     /// </summary>
     /// <param name="name">Name of the TDE protector</param>
-    /// <param name="encryptedData">The BYOK TDE protector encrypted under KEK</param>
-    /// <param name="kekId">Key identifier of the KEK used</param>
+    /// <param name="transferBlobStrategy">The strategy used to create the transfer blob</param>
     /// <returns>The public information of the Azure Key Vault key that has been uploaded</returns>
-    public Task<KeyVaultUploadKeyResponse> UploadKey(string name, byte[] encryptedData, string kekId);
+    public Task<KeyVaultUploadKeyResponse> UploadKey(string name, ITransferBlobStrategy transferBlobStrategy);
 
     /// <summary>
     /// Generate a Key Encryption Key (KEK) to protect the customer's TDE protector
@@ -32,13 +31,13 @@ public interface IKeyVaultService
     /// <returns>A public key in pem format</returns>
     public Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekId);
 
-
     /// <summary>
     /// Asynchronously delete a key encryption key
     /// </summary>
     /// <param name="kekId"></param>
     /// <returns> The response message</returns>
     public Task<DeletedKey> DeleteKekAsync(string kekId);
+    
     /// <summary>
     /// Purge a deleted key
     /// </summary>

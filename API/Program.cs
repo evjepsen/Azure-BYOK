@@ -60,6 +60,7 @@ builder.Services.AddSwaggerGen(options =>
 
 // Add the Services defined in infrastructure
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IKeyVaultService, KeyVaultService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IAlertService, AlertService>();

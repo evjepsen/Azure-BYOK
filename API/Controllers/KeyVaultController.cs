@@ -1,6 +1,7 @@
 using API.Models;
 using Azure;
 using Infrastructure.Interfaces;
+using Infrastructure.TransferBlobStrategies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,6 +18,7 @@ public class KeyVaultController : Controller
     private readonly IKeyVaultService _keyVaultService;
     private readonly IAlertService _alertService;
     private readonly IKeyVaultManagementService _keyVaultManagementService;
+    private readonly ITokenService _tokenService;
 
     /// <summary>
     /// The constructor for the controller
@@ -24,9 +26,14 @@ public class KeyVaultController : Controller
     /// <param name="keyVaultService">The key vault service used to interact with the Azure Key Vault</param>
     /// <param name="alertService">The alert service used to interact with the Azure Alert System</param>
     /// <param name="keyVaultManagementService">The key vault management service used to interact with key vault settings</param>
-    public KeyVaultController(IKeyVaultService keyVaultService, IAlertService alertService, IKeyVaultManagementService keyVaultManagementService)
+    /// <param name="tokenService">The token service used when importing keys</param>
+    public KeyVaultController(IKeyVaultService keyVaultService, 
+        IAlertService alertService, 
+        IKeyVaultManagementService keyVaultManagementService, 
+        ITokenService tokenService)
     {
         _keyVaultManagementService = keyVaultManagementService;
+        _tokenService = tokenService;
         _keyVaultService = keyVaultService;
         _alertService = alertService;
     }
@@ -53,59 +60,25 @@ public class KeyVaultController : Controller
     /// <response code="401">Unauthorized</response>
     /// <response code="404">If the key encryption key or action groups used don't exist</response>
     /// <response code="500">If there was an internal server error</response>
-    [HttpPost]
-    public async Task<IActionResult> ImportUserSpecifiedKey([FromBody] ImportKeyRequest request)
+    [HttpPost("/import/encryptedKey")]
+    public async Task<IActionResult> ImportUserSpecifiedEncryptedKey([FromBody] ImportEncryptedKeyRequest request)
     {
-        // There must be an alert for key vault usage setup
-        var isThereAKeyVaultAlert = await _alertService.CheckForKeyVaultAlertAsync();
+        // Check that the request (ImportEncryptedKeyRequest) object is valid
+        if (!ModelState.IsValid)
+        {
+            return BadRequest("The request body is invalid (Properly JSON formatting error)");
+        }
+        
+        var actionResult = await CheckValidityOfImportRequestAsync(request.ActionGroups.ToList());
 
-        if (!isThereAKeyVaultAlert)
+        if (actionResult is not OkResult)
         {
-            return BadRequest("Missing a key vault alert");
+            return actionResult;
         }
-        
-        // There must be at least one Action Group
-        if (!request.ActionGroups.Any())
-        {
-            return BadRequest("Missing an Action Group");
-        }
-        
-        // Each of them have to exist
-        foreach (var actionGroupName in request.ActionGroups)
-        {
-            try
-            {
-                var actionGroup = await _alertService.GetActionGroupAsync(actionGroupName);
-                if (!actionGroup.HasData)
-                {
-                    return BadRequest($"The action group {actionGroupName} does not exist");
-                }
-            }
-            catch (RequestFailedException e)
-            {
-                return StatusCode(e.Status, e.ErrorCode);
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
-            }
-        }
-        
-        // Extract the encrypted key
-        byte[] encryptedKey;
-        try
-        {
-            encryptedKey = Convert.FromBase64String(request.EncryptedKeyBase64);
-        }
-        catch (FormatException)
-        {
-            return BadRequest("Invalid base64 format for EncryptedKeyBase64");
-        }
-        
-        // TODO: ADD CHECK THAT KEY ENCRYPTION KEY EXISTS
         
         // Upload the key to Azure
-        var response = await _keyVaultService.UploadKey(request.Name, encryptedKey, request.KeyEncryptionKeyId);
+        var transferBlobStrategy = new EncryptedKeyTransferBlobStrategy(request.KeyEncryptionKeyId, request.EncryptedKeyBase64, _tokenService);
+        var response = await _keyVaultService.UploadKey(request.Name, transferBlobStrategy);
         
         // Create an alert for the new key
         await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid!, request.ActionGroups);
@@ -114,9 +87,41 @@ public class KeyVaultController : Controller
     }
 
     /// <summary>
+    /// Endpoint used to import (into Azure) a user specified key transfer blob
+    /// </summary>
+    /// <param name="request">The Key Import request containing the transfer blob</param>
+    /// <response code="200">Returns the public part of the user specified key</response>
+    /// <response code="400">If the request is invalid</response>
+    /// <response code="401">Unauthorized</response>
+    /// <response code="404">If the key encryption key or action groups used don't exist</response>
+    /// <response code="500">If there was an internal server error</response>
+    [HttpPost("/import/blob")]
+    public async Task<IActionResult> ImportUserSpecifiedTransferBlob([FromBody] ImportKeyBlobRequest request)
+    {
+        // Check that the request (ImportKeyBlobRequest) object is valid
+        if (!ModelState.IsValid)
+        {
+            return BadRequest("The request body is invalid (Properly JSON formatting error)");
+        }
+        
+        var actionResult = await CheckValidityOfImportRequestAsync(request.ActionGroups.ToList());
+
+        if (actionResult is not OkResult)
+        {
+            return actionResult;
+        }
+        
+        var transferBlobStrategy = new SpecifiedTransferBlobStrategy(request.KeyTransferBlob);
+        var response = await _keyVaultService.UploadKey(request.Name, transferBlobStrategy);
+        await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid!, request.ActionGroups);
+        
+        return Ok(response);
+    }
+
+    /// <summary>
     /// Endpoint to get the public key part of a Key Encryption Key (KEK) in PEM format
     /// </summary>
-    /// <param name="kekName"></param>
+    /// <param name="kekName">Name of the key encryption key</param>
     /// <response code="200">Returns the public key of KEK in PEM format</response>
     /// <response code="404">Key not found</response>
     /// <response code="400">Bad request. See the error code for details</response>
@@ -204,5 +209,45 @@ public class KeyVaultController : Controller
         }
     }
     
+    // Helper method to check that import request (both blob and encrypted) are valid
+    private async Task<IActionResult> CheckValidityOfImportRequestAsync(List<string> actionGroups)
+    {
+        // There must be an alert for key vault usage setup
+        var isThereAKeyVaultAlert = await _alertService.CheckForKeyVaultAlertAsync();
+
+        if (!isThereAKeyVaultAlert)
+        {
+            return BadRequest("Missing a key vault alert");
+        }
+        
+        // There must be at least one Action Group
+        if (!actionGroups.Any())
+        {
+            return BadRequest("Missing an Action Group");
+        }
+        
+        // Each of them have to exist
+        foreach (var actionGroupName in actionGroups)
+        {
+            try
+            {
+                var actionGroup = await _alertService.GetActionGroupAsync(actionGroupName);
+                if (!actionGroup.HasData)
+                {
+                    return BadRequest($"The action group {actionGroupName} does not exist");
+                }
+            }
+            catch (RequestFailedException e)
+            { 
+                return StatusCode(e.Status, e.ErrorCode);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+            }
+        }
+
+        return Ok();
+    }
     
 }

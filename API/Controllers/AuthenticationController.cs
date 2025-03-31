@@ -17,14 +17,14 @@ public class AuthenticationController : Controller
 {
     private readonly Dictionary<string,string> _schemeMap;
     private readonly List<string> _validEmails;
-    private readonly ITokenService _tokenService;
+    private readonly IJwtService _jwtService;
 
     /// <summary>
     /// Constructor for the authentication controller
     /// </summary>
-    public AuthenticationController(IOptions<ApplicationOptions> applicationOptions, ITokenService tokenService)
+    public AuthenticationController(IOptions<ApplicationOptions> applicationOptions, IJwtService jwtService)
     {
-        _tokenService = tokenService;
+        _jwtService = jwtService;
         // Map over the valid authentication schemes
         _schemeMap = new Dictionary<string, string>
         {
@@ -92,7 +92,7 @@ public class AuthenticationController : Controller
             new("provider", provider),
         };
         
-        var accessToken = _tokenService.GenerateAccessToken(claims);
+        var accessToken = _jwtService.GenerateAccessToken(claims);
         
         // Return the access token for further use
         return Ok(new {accessToken});

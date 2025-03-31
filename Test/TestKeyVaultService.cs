@@ -1,11 +1,14 @@
 using Azure.Security.KeyVault.Keys;
+using FakeHSM;
 using Infrastructure;
 using Infrastructure.Interfaces;
+using Infrastructure.TransferBlobStrategies;
 using Test.TestHelpers;
 
 namespace Test;
 
-
+[TestFixture]
+[TestOf(typeof(KeyVaultService))]
 public class TestKeyVaultService
 {
     private ITokenService _tokenService;
@@ -18,7 +21,7 @@ public class TestKeyVaultService
         TestHelper.CreateTestConfiguration();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
         var configuration = TestHelper.CreateTestConfiguration();
-        _tokenService = new TokenService(TestHelper.CreateJwtOptions(configuration));
+        _tokenService = new TokenService();
         var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
         _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory, applicationOptions);
         _keyVaultManagementService = new KeyVaultManagementService(applicationOptions);
@@ -43,15 +46,17 @@ public class TestKeyVaultService
     [Test]
     public async Task ShouldBePossibleToEncryptKeyWithKekAndUpload()
     {
-        // Given a Key Encryption Key and transfer blob
+        // Given a Key Encryption Key and encrypted key
         var kekName = $"KEK-{Guid.NewGuid()}";
         var kek = await _keyVaultService.GenerateKekAsync(kekName);
-        var hsm = new FakeHSM.FakeHsm();
-        var encryptedKek = hsm.GeneratePrivateKeyForBlob(kek.Key.ToRSA());
-        var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
+        var hsm = new FakeHsm(_tokenService);
+        var encryptedKey = hsm.EncryptPrivateKeyForUpload(kek.Key.ToRSA());
         
         // When is ask to upload it
-        var kvRes = await _keyVaultService.UploadKey(newKeyName, encryptedKek, kek.Id.ToString());
+        var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
+        var transferBlobStrategy = new EncryptedKeyTransferBlobStrategy(kek.Id.ToString(), encryptedKey, _tokenService);
+
+        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy);
         
         // Then it should be successful
         Assert.That(kvRes.Attributes.Enabled, Is.True);
@@ -109,5 +114,24 @@ public class TestKeyVaultService
         {
             Assert.ThrowsAsync<Azure.RequestFailedException>(async () => await _keyVaultService.PurgeDeletedKekAsync(kekName));
         }
+    }
+
+    [Test]
+    public async Task ShouldBePossibleToUploadAKeyBlobSpecifiedByAUser()
+    {
+        // Given a Key Encryption Key and transfer blob
+        var kekName = $"KEK-{Guid.NewGuid()}";
+        var kek = await _keyVaultService.GenerateKekAsync(kekName);
+        var hsm = new FakeHsm(_tokenService);
+        var transferBlob = hsm.GenerateBlobForUpload(kek.Key.ToRSA(), kek.Id.ToString());
+        
+        // When is ask to upload it
+        var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
+        var transferBlobStrategy = new SpecifiedTransferBlobStrategy(transferBlob);
+        
+        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy);
+        
+        // Then it should be successful
+        Assert.That(kvRes.Attributes.Enabled, Is.True);
     }
 }

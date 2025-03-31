@@ -8,7 +8,6 @@ using Azure.Identity;
 using Azure.Security.KeyVault.Keys;
 using Infrastructure.Helpers;
 using Infrastructure.Interfaces;
-using Microsoft.Extensions.Configuration;
 using Infrastructure.Models;
 using Infrastructure.Options;
 using Microsoft.Extensions.Options;
@@ -47,11 +46,10 @@ public class KeyVaultService : IKeyVaultService
     }
 
 
-    public async Task<KeyVaultUploadKeyResponse> UploadKey(string name, byte[] encryptedData, string kekId)
+    public async Task<KeyVaultUploadKeyResponse> UploadKey(string name, ITransferBlobStrategy transferBlobStrategy)
     {
         var httpClient = _httpClientFactory.CreateClient("WaitAndRetry");
-        // Create the BYOK Blob for upload
-        var transferBlob = _tokenService.CreateKeyTransferBlob(encryptedData, kekId);
+        var transferBlob = transferBlobStrategy.GenerateTransferBlob();
         
         // (Manually) Set up the JsonWebKey
         var requestBody = _tokenService.CreateBodyForRequest(transferBlob);
