@@ -4,7 +4,9 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.KeyVault;
 using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
+using Infrastructure.Options;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure;
 
@@ -12,11 +14,11 @@ public class KeyVaultManagementService : IKeyVaultManagementService
 {
     private readonly KeyVaultResource _keyVaultResource;
     
-    public KeyVaultManagementService(IConfiguration configuration)
+    public KeyVaultManagementService(IOptions<ApplicationOptions> applicationOptions)
     {
-        var subscriptionId =    configuration["SUBSCRIPTION_ID"] ?? throw new EnvironmentVariableNotSetException("The Subscription Id was not set");
-        var resourceGroupName = configuration["RESOURCE_GROUP_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Group Name was not set");
-        var keyVaultResourceName = configuration["KV_RESOURCE_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Name was not set");
+        var subscriptionId = applicationOptions.Value.SubscriptionId;
+        var resourceGroupName = applicationOptions.Value.ResourceGroupName;
+        var keyVaultResourceName = applicationOptions.Value.KeyVaultResourceName;
         
         // Get management token.
         var credential = new DefaultAzureCredential();

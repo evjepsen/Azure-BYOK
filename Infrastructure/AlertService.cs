@@ -9,7 +9,9 @@ using Azure.ResourceManager.Resources;
 using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
 using Infrastructure.Models;
+using Infrastructure.Options;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure;
 
@@ -21,14 +23,14 @@ public class AlertService : IAlertService
     private readonly string _resourceGroupName;
     private readonly string _keyVaultResourceId;
 
-    public AlertService(IConfiguration configuration, IHttpClientFactory httpClientFactory)
+    public AlertService(IHttpClientFactory httpClientFactory, IOptions<ApplicationOptions> applicationOptions)
     {
         TokenCredential credential = new DefaultAzureCredential();
 
         // Save the id's needed
-        _subscriptionId =    configuration["SUBSCRIPTION_ID"] ?? throw new EnvironmentVariableNotSetException("The Subscription Id was not set");
-        _resourceGroupName = configuration["RESOURCE_GROUP_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Group Name was not set");
-        var keyVaultResource = configuration["KV_RESOURCE_NAME"] ?? throw new EnvironmentVariableNotSetException("The Resource Name was not set");
+        _subscriptionId = applicationOptions.Value.SubscriptionId;
+        _resourceGroupName = applicationOptions.Value.ResourceGroupName;
+        var keyVaultResource = applicationOptions.Value.KeyVaultResourceName;
         
         _armClient = new ArmClient(credential, _subscriptionId, new ArmClientOptions
         {

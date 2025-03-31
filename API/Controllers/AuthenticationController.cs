@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using Google.Apis.Auth.AspNetCore3;
 using Infrastructure.Interfaces;
+using Infrastructure.Options;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Protocols.Configuration;
 
 namespace API.Controllers;
@@ -14,13 +16,13 @@ namespace API.Controllers;
 public class AuthenticationController : Controller
 {
     private readonly Dictionary<string,string> _schemeMap;
-    private readonly string[] _validEmails;
+    private readonly List<string> _validEmails;
     private readonly ITokenService _tokenService;
 
     /// <summary>
     /// Constructor for the authentication controller
     /// </summary>
-    public AuthenticationController(IConfiguration configuration, ITokenService tokenService)
+    public AuthenticationController(IOptions<ApplicationOptions> applicationOptions, ITokenService tokenService)
     {
         _tokenService = tokenService;
         // Map over the valid authentication schemes
@@ -31,9 +33,8 @@ public class AuthenticationController : Controller
         };
         
         // Valid email addresses
-        _validEmails = configuration
-            .GetSection("AllowedEmails")
-            .Get<string []>() ?? throw new InvalidConfigurationException("No valid emails found in configuration");
+        _validEmails = applicationOptions.Value.AllowedEmails;
+
     }
     
     /// <summary>
@@ -77,7 +78,7 @@ public class AuthenticationController : Controller
         var userId = authResult.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
         var name = authResult.Principal.FindFirstValue(ClaimTypes.Name);
         
-        if (!_validEmails.Contains(email)) 
+        if (email == null || !_validEmails.Contains(email)) 
         {
             return Unauthorized("No access");
         }
@@ -86,7 +87,7 @@ public class AuthenticationController : Controller
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, userId ?? string.Empty),
-            new(ClaimTypes.Email, email ?? string.Empty),
+            new(ClaimTypes.Email, email),
             new(ClaimTypes.Name, name ?? string.Empty),
             new("provider", provider),
         };

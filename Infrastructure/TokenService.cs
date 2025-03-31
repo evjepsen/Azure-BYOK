@@ -5,17 +5,18 @@ using Infrastructure.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 using Infrastructure.Helpers;
 using Infrastructure.Models;
-using Microsoft.Extensions.Configuration;
+using Infrastructure.Options;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure;
 
 public class TokenService : ITokenService
 {
-    private readonly IConfiguration _configuration;
+    private readonly JwtOptions _jwtOptions;
 
-    public TokenService(IConfiguration configuration)
+    public TokenService(IOptions<JwtOptions> jwtOptions)
     {
-        _configuration = configuration;
+        _jwtOptions = jwtOptions.Value;
     }
     
     public KeyTransferBlob CreateKeyTransferBlob(byte[] cipherText, string kekId)
@@ -66,13 +67,13 @@ public class TokenService : ITokenService
     {
         var jwtTokenHandler = new JwtSecurityTokenHandler();
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-            _configuration["Jwt:Secret"] ?? throw new InvalidOperationException("Missing JWT Secret"))
+            _jwtOptions.Secret)
         );
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
+            issuer: _jwtOptions.Issuer,
+            audience: _jwtOptions.Audience,
             claims: claims,
             expires: DateTime.Now.AddHours(1),
             signingCredentials: credentials

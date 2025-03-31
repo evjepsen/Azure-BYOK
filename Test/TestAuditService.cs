@@ -1,5 +1,7 @@
 using Infrastructure;
 using Infrastructure.Interfaces;
+using Infrastructure.Options;
+using Microsoft.Extensions.Options;
 using Test.TestHelpers;
 
 namespace Test;
@@ -11,9 +13,10 @@ public class TestAuditService
     [SetUp]
     public void Setup()
     {
-        var config = TestHelper.CreateTestConfiguration();
+        var configuration = TestHelper.CreateTestConfiguration();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
-        _auditService = new AuditService(config, httpClientFactory);
+        var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
+        _auditService = new AuditService(applicationOptions, httpClientFactory);
     }
 
     [Test]
