@@ -55,6 +55,7 @@ public interface IKeyVaultService
     /// <summary>
     /// Rotate a key encryption key
     /// </summary>
+    /// <param name="kekId"></param>
     /// <returns></returns>
     public Task<KeyVaultKey> RotateKekAsync(string kekId);
 }
