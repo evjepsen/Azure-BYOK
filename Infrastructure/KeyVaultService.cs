@@ -153,7 +153,7 @@ public class KeyVaultService : IKeyVaultService
         
         if (!res.HasValue)
         {
-            throw new HttpRequestException("Failed to delete the key");
+            throw new HttpRequestException("Failed to recover the key encryption key");
         }
         
         return recoverOperation;
