@@ -282,6 +282,13 @@ public class KeyVaultController : Controller
     [HttpPost("rotate/encryptedKey")]
     public async Task<IActionResult> RotateKeyUsingNewEncryptedKey([FromBody] RotateEncryptedKeyRequest request)
     {
+        // Check that the request (RotateEncryptedKeyRequest) object is valid
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("The upload request could not be completed - the request body is invalid");
+            return BadRequest("The request body is invalid (Properly JSON formatting error)");
+        }
+        
         // Specify the strategy
         var strategy = new EncryptedKeyTransferBlobStrategy(request.KeyEncryptionKeyId, request.EncryptedKeyBase64, _tokenService);
         return await RotateKeyWithErrorHandling(request, strategy);
@@ -298,6 +305,13 @@ public class KeyVaultController : Controller
     [HttpPost("rotate/blob")]
     public async Task<IActionResult> RotateKeyUsingBlob([FromBody] RotateKeyBlobRequest request)
     {
+        // Check that the request (RotateEncryptedKeyRequest) object is valid
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("The upload request could not be completed - the request body is invalid");
+            return BadRequest("The request body is invalid (Properly JSON formatting error)");
+        }
+        
         // Specify the strategy
         var strategy = new SpecifiedTransferBlobStrategy(request.KeyTransferBlob);
         return await RotateKeyWithErrorHandling(request, strategy);
@@ -408,22 +422,31 @@ public class KeyVaultController : Controller
     // Helper method to complete the rotation
     private async Task<IActionResult> RotateKeyWithErrorHandling(RotateKeyRequest request, ITransferBlobStrategy strategy)
     {
+        // Try to rotate the key
         try
         {
-            // Try to rotate the key
-            _logger.LogInformation("Rotating the key {keyName}", request.Name);
-            var response = await _keyVaultService.UploadKey(request.Name, strategy);
+            // Check that the key exists
+            var doesKeyExist = await _keyVaultService.CheckIfKeyExistsAsync(request.KeyName);
+            
+            if (!doesKeyExist)
+            {
+                _logger.LogWarning("The key {keyName} does not exist", request.KeyName);
+                return BadRequest("The key does not exist. Must add it using the import endpoint");
+            }
+            
+            _logger.LogInformation("Rotating the key {keyName}", request.KeyName);
+            var response = await _keyVaultService.UploadKey(request.KeyName, strategy);
             
             return Ok(response);
         }
         catch (RequestFailedException e)
         {
-            _logger.LogError("Azure failed to rotate the key {keyName}: {errorMessage}", request.Name, e.Message);
+            _logger.LogError("Azure failed to rotate the key {keyName}: {errorMessage}", request.KeyName, e.Message);
             return StatusCode(e.Status, e.ErrorCode);
         }
         catch (Exception)
         {
-            _logger.LogError("An unexpected error occurred while rotating the key {keyName}", request.Name);
+            _logger.LogError("An unexpected error occurred while rotating the key {keyName}", request.KeyName);
             return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
         }
     }

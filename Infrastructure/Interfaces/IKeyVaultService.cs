@@ -51,4 +51,11 @@ public interface IKeyVaultService
     /// <param name="keyName">id of the Key</param>
     /// <returns>The response message</returns>
     public Task<RecoverDeletedKeyOperation> RecoverDeletedKeyAsync(string keyName);
+
+    /// <summary>
+    /// Checks whether a given key exists in azure
+    /// </summary>
+    /// <param name="keyName">The name of the key to check</param>
+    /// <returns>True when the key exists and false otherwise</returns>
+    public Task<bool> CheckIfKeyExistsAsync(string keyName);
 }

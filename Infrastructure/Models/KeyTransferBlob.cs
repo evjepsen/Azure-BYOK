@@ -1,6 +1,6 @@
 namespace Infrastructure.Models;
 
-//  A proper Key Tranfer Blob according to the specification:
+//  A proper Key Transfer Blob according to the specification:
 //  {
 //   "schema_version": "1.0.0",
 //   "header":

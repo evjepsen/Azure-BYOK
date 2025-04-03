@@ -152,4 +152,30 @@ public class TestKeyVaultService
         // Then it should be successful
         Assert.That(kvRes.Attributes.Enabled, Is.True);
     }
+
+    [Test]
+    public async Task ShouldExistingKeyExist()
+    {
+        // Given a key in the key vault
+        var keyName = $"key-{Guid.NewGuid()}";
+        await _keyVaultService.GenerateKekAsync(keyName);
+        
+        // When I check whether it exists
+        var keyExists = await _keyVaultService.CheckIfKeyExistsAsync(keyName);
+        // Then it should
+        Assert.That(keyExists, Is.True);
+    }
+    
+    [Test]
+    public async Task ShouldKeyThatIsNotAddedNotExist()
+    {
+        // Given a key in the key vault
+        var keyName = $"key-{Guid.NewGuid()}";
+        
+        // When I check whether it exists
+        var keyExists = await _keyVaultService.CheckIfKeyExistsAsync(keyName);
+
+        // Then it should
+        Assert.That(keyExists, Is.False);
+    }
 }

@@ -10,7 +10,7 @@ public abstract class RotateKeyRequest
     /// <summary>
     /// The name of the key
     /// </summary>
-    public required string Name { get; init; }
+    public required string KeyName { get; init; }
 }
 
 /// <summary>

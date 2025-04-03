@@ -183,4 +183,21 @@ public class KeyVaultService : IKeyVaultService
         
         return recoverOperation;
     }
+
+    public async Task<bool> CheckIfKeyExistsAsync(string keyName)
+    {
+        bool doesKeyExist;
+        try
+        {
+            var response = await _client.GetKeyAsync(keyName);
+            doesKeyExist = response.HasValue;
+        }
+        catch (RequestFailedException ex)
+        {
+            if (ex.Status == 404) doesKeyExist = false;
+            else throw;
+        }
+        
+        return doesKeyExist;
+    }
 }
