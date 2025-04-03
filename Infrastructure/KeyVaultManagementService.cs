@@ -62,6 +62,7 @@ public class KeyVaultManagementService : IKeyVaultManagementService
 
     public bool DoesKeyVaultHaveSoftDeleteEnabled()
     {
+        _logger.LogInformation("Checking if the key vault has soft delete enabled");
         return _keyVaultResource.Data.Properties.EnableSoftDelete.GetValueOrDefault(true);
     }
 }
