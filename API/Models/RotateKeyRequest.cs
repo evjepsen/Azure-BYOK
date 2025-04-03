@@ -6,7 +6,7 @@ namespace API.Models;
 public class RotateKeyRequest
 {
     /// <summary>
-    /// The name of the new key
+    /// The name of the key
     /// </summary>
     public required string Name { get; init; }
     
