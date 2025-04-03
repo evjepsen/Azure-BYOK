@@ -21,15 +21,13 @@ public class TokenService : ITokenService
         _logger.LogInformation("Creating key transfer blob");
         var keyTransferBlob = new KeyTransferBlob
         {
-            SchemaVersion = "1.0.0",
             Header = new HeaderObject
             {
                 Kid = kekId, // The id of the KEK
                 Alg = "dir",
                 Enc = "CKM_RSA_AES_KEY_WRAP"
             },
-            Ciphertext = Base64UrlEncoder.Encode(encryptedKey),
-            Generator = "BYOK v1.0; Azure Key Vault"
+            Ciphertext = Base64UrlEncoder.Encode(encryptedKey)
         };
 
         return keyTransferBlob;

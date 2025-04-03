@@ -14,10 +14,10 @@ namespace Infrastructure.Models;
 //  }
 public class KeyTransferBlob
 {
-    public required string SchemaVersion { get; init; }
+    public string SchemaVersion { get; init; } = "1.0.0";
     public required HeaderObject Header { get; init; }
     public required string Ciphertext { get; init; }
-    public required string Generator { get; init; }
+    public string Generator { get; init; } = "BYOK v1.0; Azure Key Vault";
 }
 
 public class HeaderObject
