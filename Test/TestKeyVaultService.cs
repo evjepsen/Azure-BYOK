@@ -3,6 +3,7 @@ using FakeHSM;
 using Infrastructure;
 using Infrastructure.Interfaces;
 using Infrastructure.TransferBlobStrategies;
+using Microsoft.Extensions.Logging.Abstractions;
 using Test.TestHelpers;
 
 namespace Test;
@@ -12,8 +13,8 @@ namespace Test;
 public class TestKeyVaultService
 {
     private ITokenService _tokenService;
-    private KeyVaultService _keyVaultService;
-    private KeyVaultManagementService _keyVaultManagementService;
+    private IKeyVaultService _keyVaultService;
+    private IKeyVaultManagementService _keyVaultManagementService;
     
     [SetUp]
     public void Setup()
@@ -21,10 +22,10 @@ public class TestKeyVaultService
         TestHelper.CreateTestConfiguration();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
         var configuration = TestHelper.CreateTestConfiguration();
-        _tokenService = new TokenService();
+        _tokenService = new TokenService(new NullLoggerFactory());
         var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
-        _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory, applicationOptions);
-        _keyVaultManagementService = new KeyVaultManagementService(applicationOptions);
+        _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory, applicationOptions, new NullLoggerFactory());
+        _keyVaultManagementService = new KeyVaultManagementService(applicationOptions, new NullLoggerFactory());
     }
 
     [Test]
@@ -86,7 +87,7 @@ public class TestKeyVaultService
         var kek = await _keyVaultService.GenerateKekAsync(kekName);
         
         // When I ask to delete it
-        var delOp = await _keyVaultService.DeleteKekAsync(kekName);
+        var delOp = await _keyVaultService.DeleteKeyAsync(kekName);
         
         // Then it should be deleted and the key should be the same
         Assert.That(delOp.Properties.Id, Is.EqualTo(kek.Id));
@@ -100,20 +101,37 @@ public class TestKeyVaultService
         await _keyVaultService.GenerateKekAsync(kekName);
         
         // Which I delete
-        await _keyVaultService.DeleteKekAsync(kekName);
+        await _keyVaultService.DeleteKeyAsync(kekName);
         
         // When I ask to purge it
         // Then it should be purged if the key vault has purge protection
         if (!_keyVaultManagementService.DoesKeyVaultHavePurgeProtection())
         {
-            var purgeKekOperation = await _keyVaultService.PurgeDeletedKekAsync(kekName);
+            var purgeKekOperation = await _keyVaultService.PurgeDeletedKeyAsync(kekName);
             Assert.That(purgeKekOperation.Status, Is.EqualTo(204));
         }
         // Otherwise, purging is not possible and an exception should be thrown 
         else
         {
-            Assert.ThrowsAsync<Azure.RequestFailedException>(async () => await _keyVaultService.PurgeDeletedKekAsync(kekName));
+            Assert.ThrowsAsync<Azure.RequestFailedException>(async () => await _keyVaultService.PurgeDeletedKeyAsync(kekName));
         }
+    }
+    
+    [Test]
+    public async Task ShouldBeAbleToRecoverADeletedKey()
+    {
+        // Given a Key Encryption Key
+        var keyName = $"Random-recover-{Guid.NewGuid()}";
+        await _keyVaultService.GenerateKekAsync(keyName);
+        
+        // Which I delete
+        await _keyVaultService.DeleteKeyAsync(keyName);
+        
+        // When I ask to recover it
+        var recoverOp = await _keyVaultService.RecoverDeletedKeyAsync(keyName);
+        
+        // Then it should be recovered and the operation should be completed
+        Assert.That(recoverOp.HasCompleted, Is.EqualTo(true));
     }
 
     [Test]

@@ -1,5 +1,6 @@
 using FakeHSM.Interfaces;
 using Infrastructure;
+using Microsoft.Extensions.Logging.Abstractions;
 using Test.TestHelpers;
 using FakeHsm = FakeHSM.FakeHsm;
 
@@ -15,7 +16,7 @@ public class FakeHsmTest
     [SetUp]
     public void Setup()
     {
-        _tokenService = new TokenService();
+        _tokenService = new TokenService(new NullLoggerFactory());
         _fakeHsm = new FakeHsm(_tokenService);
     }
     
@@ -24,7 +25,10 @@ public class FakeHsmTest
     {
         var configuration = TestHelper.CreateTestConfiguration();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
-        var keyVaultService = new KeyVaultService(_tokenService, httpClientFactory, TestHelper.CreateApplicationOptions(configuration));
+        var keyVaultService = new KeyVaultService(_tokenService, 
+            httpClientFactory, 
+            TestHelper.CreateApplicationOptions(configuration), 
+            new NullLoggerFactory());
         
         var kekName = $"KEK-{Guid.NewGuid()}";
         var kek = await keyVaultService.GenerateKekAsync(kekName);

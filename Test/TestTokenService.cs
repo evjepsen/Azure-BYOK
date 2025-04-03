@@ -1,5 +1,6 @@
 using Infrastructure;
 using Infrastructure.Interfaces;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Test;
@@ -13,7 +14,7 @@ public class TestTokenService
     [SetUp]
     public void Setup()
     {
-        _tokenService = new TokenService();
+        _tokenService = new TokenService(new NullLoggerFactory());
     }
     
     [Test]

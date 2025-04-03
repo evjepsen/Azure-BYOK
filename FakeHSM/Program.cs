@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Infrastructure;
 using Infrastructure.Helpers;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FakeHSM;
 
@@ -30,7 +31,7 @@ public abstract class Program
         kek.ImportFromPem(pem);
         Console.WriteLine("PEM loaded...");
 
-        var tokenService = new TokenService();
+        var tokenService = new TokenService(new NullLoggerFactory());
         var fakeHsm = new FakeHsm(tokenService);
         
         Console.WriteLine("Generate blob? (y/n)");

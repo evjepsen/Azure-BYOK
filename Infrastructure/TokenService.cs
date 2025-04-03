@@ -3,14 +3,22 @@ using Infrastructure.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 using Infrastructure.Helpers;
 using Infrastructure.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Infrastructure;
 
 public class TokenService : ITokenService
 {
+    private readonly ILogger<TokenService> _logger;
+
+    public TokenService(ILoggerFactory loggerFactory)
+    {
+        _logger = loggerFactory.CreateLogger<TokenService>();
+    }
     
     public KeyTransferBlob CreateKeyTransferBlob(byte[] encryptedKey, string kekId)
     {
+        _logger.LogInformation("Creating key transfer blob");
         var keyTransferBlob = new KeyTransferBlob
         {
             SchemaVersion = "1.0.0",
@@ -30,12 +38,13 @@ public class TokenService : ITokenService
     public UploadKeyRequestBody CreateBodyForRequest(KeyTransferBlob transferBlob)
     {
         // Encode the transfer blob in bytes
+        _logger.LogInformation("Serializing key transfer blob into Json");
         var serializedKeyTransferBlob = TokenHelper.SerializeJsonObject(transferBlob);
         var bytes = Encoding.UTF8.GetBytes(serializedKeyTransferBlob);
         var transferBlobBase64Encoded = Convert.ToBase64String(bytes);
         
         // Create the json object
-        // The key part of the object follows the JsonWebKey structure as specified by "https://learn.microsoft.com/en-us/azure/key-vault/keys/byok-specification" 
+        _logger.LogInformation("Creating request body for key upload");
         var keyRequestBody = new UploadKeyRequestBody
         {
             Key = new CustomJwk
