@@ -10,8 +10,8 @@ namespace Test;
 public class TestKeyVaultService
 {
     private ITokenService _tokenService;
-    private KeyVaultService _keyVaultService;
-    private KeyVaultManagementService _keyVaultManagementService;
+    private IKeyVaultService _keyVaultService;
+    private IKeyVaultManagementService _keyVaultManagementService;
     
     [SetUp]
     public void Setup()
@@ -110,5 +110,22 @@ public class TestKeyVaultService
         {
             Assert.ThrowsAsync<Azure.RequestFailedException>(async () => await _keyVaultService.PurgeDeletedKeyAsync(kekName));
         }
+    }
+    
+    [Test]
+    public async Task ShouldBeAbleToRecoverADeletedKey()
+    {
+        // Given a Key Encryption Key
+        var keyName = $"Random-recover-{Guid.NewGuid()}";
+        await _keyVaultService.GenerateKekAsync(keyName);
+        
+        // Which I delete
+        await _keyVaultService.DeleteKeyAsync(keyName);
+        
+        // When I ask to recover it
+        var recoverOp = await _keyVaultService.RecoverDeletedKeyAsync(keyName);
+        
+        // Then it should be recovered and the operation should be completed
+        Assert.That(recoverOp.HasCompleted, Is.EqualTo(true));
     }
 }

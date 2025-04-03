@@ -36,14 +36,21 @@ public interface IKeyVaultService
     /// <summary>
     /// Asynchronously delete a key encryption key
     /// </summary>
-    /// <param name="keyId"></param>
+    /// <param name="keyId">id of the KEK</param>
     /// <returns> The response message</returns>
     public Task<DeletedKey> DeleteKeyAsync(string keyId);
     
     /// <summary>
-    /// Purge a deleted key
+    /// Purge a deleted key encryption key
     /// </summary>
-    /// <param name="keyId"></param>
+    /// <param name="keyId">id of the KEK</param>
     /// <returns> The response message </returns>
     public Task<Response> PurgeDeletedKeyAsync(string keyId);
+
+    /// <summary>
+    /// Recover a deleted key
+    /// </summary>
+    /// <param name="keyName">id of the Key</param>
+    /// <returns>The response message</returns>
+    public Task<RecoverDeletedKeyOperation> RecoverDeletedKeyAsync(string keyName);
 }

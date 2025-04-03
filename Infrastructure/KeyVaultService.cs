@@ -72,7 +72,7 @@ public class KeyVaultService : IKeyVaultService
         // Add the authentication token
         var authorizationToken = await _tokenCredential.GetTokenAsync(
             new TokenRequestContext(_scopes),
-            default
+            CancellationToken.None
         );
         
         httpClient.DefaultRequestHeaders.Authorization =
@@ -168,5 +168,20 @@ public class KeyVaultService : IKeyVaultService
         var purgeOperation = await _client.PurgeDeletedKeyAsync(keyId);
         
         return purgeOperation;
+    }
+
+    public async Task<RecoverDeletedKeyOperation> RecoverDeletedKeyAsync(string keyName)
+    {
+        _logger.LogInformation("Recovering the key with name: {keyName}", keyName);
+        var recoverOperation = await _client.StartRecoverDeletedKeyAsync(keyName);
+        await recoverOperation.WaitForCompletionAsync();
+        
+        if (!recoverOperation.HasCompleted)
+        {
+            _logger.LogError("Failed to recover the key {keyName}", keyName);
+            throw new HttpRequestException($"Failed to recover the key {keyName}");
+        }
+        
+        return recoverOperation;
     }
 }

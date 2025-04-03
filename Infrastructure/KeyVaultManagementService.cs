@@ -59,4 +59,10 @@ public class KeyVaultManagementService : IKeyVaultManagementService
         _logger.LogInformation("Checking if the key vault has purge protection enabled");
         return _keyVaultResource.Data.Properties.EnablePurgeProtection.GetValueOrDefault(false);
     }
+
+    public bool DoesKeyVaultHaveSoftDeleteEnabled()
+    {
+        _logger.LogInformation("Checking if the key vault has soft delete enabled");
+        return _keyVaultResource.Data.Properties.EnableSoftDelete.GetValueOrDefault(true);
+    }
 }
