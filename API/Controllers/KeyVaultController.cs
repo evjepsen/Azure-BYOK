@@ -5,6 +5,7 @@ using Infrastructure.TransferBlobStrategies;
 using Infrastructure.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
@@ -98,47 +99,8 @@ public class KeyVaultController : Controller
         
         // Try to upload the key to Azure
         _logger.LogInformation("Uploading the key to Azure");
-        KeyVaultUploadKeyResponse response;
-        try
-        {
-            response = await _keyVaultService.UploadKey(request.Name,
-                new EncryptedKeyTransferBlobStrategy(request.KeyEncryptionKeyId, request.EncryptedKeyBase64,
-                    _tokenService));
-        }
-        catch (HttpRequestException e)
-        {
-            _logger.LogError("Azure failed to import key {keyName}: {ErrorMessage}", request.Name, e.Message);
-            return BadRequest($"Azure failed to import key: {e.Message}");
-        }
-        catch (Exception)
-        {
-            _logger.LogError("An unexpected error occurred when uploading the key {keyName}", request.Name);
-            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
-        }
-        
-        // Try to create an alert for the new key
-        _logger.LogInformation("Creating a log alert for the new key {keyName}", request.Name);
-        try
-        {
-            await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid!, request.ActionGroups);
-        }
-        catch (RequestFailedException e)
-        {
-            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}", request.Name, e.Message);
-            return StatusCode(e.Status, e.ErrorCode);
-        }
-        catch (HttpRequestException e)
-        {
-            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}", request.Name, e.Message);
-            return BadRequest($"Azure failed to create an alert for the uploaded key key: {e.Message}");
-        }
-        catch (Exception)
-        {
-            _logger.LogError("An unexpected error occurred when creating a key alert for the key {keyName}", request.Name);
-            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
-        }
-        
-        return Ok(response);
+        var transferBlobStrategy = new EncryptedKeyTransferBlobStrategy(request.KeyEncryptionKeyId, request.EncryptedKeyBase64, _tokenService);
+        return await ExecuteUploadWithErrorHandling(transferBlobStrategy, request);
     }
 
     /// <summary>
@@ -167,11 +129,10 @@ public class KeyVaultController : Controller
             return actionResult;
         }
         
+        // Try to upload the key to Azure
+        _logger.LogInformation("Uploading the key to Azure");
         var transferBlobStrategy = new SpecifiedTransferBlobStrategy(request.KeyTransferBlob);
-        var response = await _keyVaultService.UploadKey(request.Name, transferBlobStrategy);
-        await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid!, request.ActionGroups);
-        
-        return Ok(response);
+        return await ExecuteUploadWithErrorHandling(transferBlobStrategy, request);
     }
 
     /// <summary>
@@ -284,7 +245,7 @@ public class KeyVaultController : Controller
     /// <response code="404">Key not found</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("recoverDeletedKey/{kekName}")]
-    public async Task<IActionResult> RecoverDeletedKeyEncryptionKey(string kekName)
+    public async Task<IActionResult> RecoverDeletedKey(string kekName)
     {
         try
         {
@@ -311,38 +272,37 @@ public class KeyVaultController : Controller
     }
 
     /// <summary>
-    /// Rotate a key encryption key
+    /// Rotate a key encryption key using the new encrypted key
     /// </summary>
     /// <param name="request">The key rotate request</param>
     /// <response code="200">Key was rotated</response>
     /// <response code="400">Bad request</response>
     /// <response code="404">Key not found</response>
     /// <response code="500">Internal server error</response>
-    [HttpPost("rotate")]
-    public async Task<IActionResult> RotateKeyEncryptionKey([FromBody] RotateEncryptedKeyRequest request)
+    [HttpPost("rotate/encryptedKey")]
+    public async Task<IActionResult> RotateKeyUsingNewEncryptedKey([FromBody] RotateEncryptedKeyRequest request)
     {
-        try
-        {
-            // Try to rotate the key
-            _logger.LogInformation("Rotating the key {keyName}", request.Name);
-            var strategy = new EncryptedKeyTransferBlobStrategy(request.KeyEncryptionKeyId,
-                request.EncryptedKeyBase64, _tokenService);
-            var response = await _keyVaultService.UploadKey(request.Name, strategy);
-            
-            return Ok(response);
-        }
-        catch (RequestFailedException e)
-        {
-            _logger.LogError("Azure failed to rotate the key {keyName}: {errorMessage}", request.Name, e.Message);
-            return StatusCode(e.Status, e.ErrorCode);
-        }
-        catch (Exception)
-        {
-            _logger.LogError("An unexpected error occurred while rotating the key {keyName}", request.Name);
-            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
-        }
+        // Specify the strategy
+        var strategy = new EncryptedKeyTransferBlobStrategy(request.KeyEncryptionKeyId, request.EncryptedKeyBase64, _tokenService);
+        return await RotateKeyWithErrorHandling(request, strategy);
     }
     
+    /// <summary>
+    /// Rotate a key encryption key using the new encrypted key stored in a blob
+    /// </summary>
+    /// <param name="request">The key rotate request</param>
+    /// <response code="200">Key was rotated</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="404">Key not found</response>
+    /// <response code="500">Internal server error</response>
+    [HttpPost("rotate/blob")]
+    public async Task<IActionResult> RotateKeyUsingBlob([FromBody] RotateKeyBlobRequest request)
+    {
+        // Specify the strategy
+        var strategy = new SpecifiedTransferBlobStrategy(request.KeyTransferBlob);
+        return await RotateKeyWithErrorHandling(request, strategy);
+    }
+
     // Helper method to check that import request (both blob and encrypted) are valid
     private async Task<IActionResult> CheckValidityOfImportRequestAsync(List<string> actionGroups)
     {
@@ -363,21 +323,11 @@ public class KeyVaultController : Controller
         // Each of them have to exist
         foreach (var actionGroupName in actionGroups)
         {
-            try
+            var actionResult = await CheckActionGroupExists(actionGroupName);
+            
+            if (actionResult is not OkResult)
             {
-                var actionGroup = await _alertService.GetActionGroupAsync(actionGroupName);
-                if (!actionGroup.HasData)
-                {
-                    return BadRequest($"The action group {actionGroupName} does not exist");
-                }
-            }
-            catch (RequestFailedException e)
-            { 
-                return StatusCode(e.Status, e.ErrorCode);
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+                return actionResult;
             }
         }
 
@@ -410,4 +360,72 @@ public class KeyVaultController : Controller
 
         return actionResult;
     }
+    
+    // Helper method to complete the upload
+    private async Task<IActionResult> ExecuteUploadWithErrorHandling(ITransferBlobStrategy transferBlobStrategy, ImportKeyRequest request)
+    {
+        KeyVaultUploadKeyResponse response;
+        try
+        {
+            response = await _keyVaultService.UploadKey(request.Name, transferBlobStrategy);
+        }
+        catch (HttpRequestException e)
+        {
+            _logger.LogError("Azure failed to import key {keyName}: {ErrorMessage}", request.Name, e.Message);
+            return BadRequest($"Azure failed to import key: {e.Message}");
+        }
+        catch (Exception)
+        {
+            _logger.LogError("An unexpected error occurred when uploading the key {keyName}", request.Name);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+        
+        // Try to create an alert for the new key
+        _logger.LogInformation("Creating a log alert for the new key {keyName}", request.Name);
+        try
+        {
+            await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid!, request.ActionGroups);
+        }
+        catch (RequestFailedException e)
+        {
+            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}", request.Name, e.Message);
+            return StatusCode(e.Status, e.ErrorCode);
+        }
+        catch (HttpRequestException e)
+        {
+            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}", request.Name, e.Message);
+            return BadRequest($"Azure failed to create an alert for the uploaded key key: {e.Message}");
+        }
+        catch (Exception)
+        {
+            _logger.LogError("An unexpected error occurred when creating a key alert for the key {keyName}", request.Name);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+        
+        return Ok(response);
+    }
+    
+    // Helper method to complete the rotation
+    private async Task<IActionResult> RotateKeyWithErrorHandling(RotateKeyRequest request, ITransferBlobStrategy strategy)
+    {
+        try
+        {
+            // Try to rotate the key
+            _logger.LogInformation("Rotating the key {keyName}", request.Name);
+            var response = await _keyVaultService.UploadKey(request.Name, strategy);
+            
+            return Ok(response);
+        }
+        catch (RequestFailedException e)
+        {
+            _logger.LogError("Azure failed to rotate the key {keyName}: {errorMessage}", request.Name, e.Message);
+            return StatusCode(e.Status, e.ErrorCode);
+        }
+        catch (Exception)
+        {
+            _logger.LogError("An unexpected error occurred while rotating the key {keyName}", request.Name);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+    }
+    
 }
