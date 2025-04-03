@@ -3,6 +3,7 @@ namespace Infrastructure.Models;
 
 public class PublicKeyKekPem
 {
-    public required string PemString{ get; init; }
+    public required Uri KekId { get; init; }
+    public required string PemString { get; init; }
 }
 

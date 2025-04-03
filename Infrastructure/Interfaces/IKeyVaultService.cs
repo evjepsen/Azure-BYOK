@@ -28,23 +28,25 @@ public interface IKeyVaultService
     /// <summary>
     /// Download public key of the KEK in PEM format
     /// </summary>
-    /// <param name="kekId">id of the KEK</param>
+    /// <param name="kekName">id of the KEK</param>
     /// <returns>A public key in pem format</returns>
-    public Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekId);
+    public Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekName);
 
 
     /// <summary>
     /// Asynchronously delete a key encryption key
     /// </summary>
-    /// <param name="kekId">id of the KEK</param>
+    /// <param name="keyId">id of the KEK</param>
     /// <returns> The response message</returns>
-    public Task<DeletedKey> DeleteKekAsync(string kekId);
+    public Task<DeletedKey> DeleteKeyAsync(string keyId);
+    
     /// <summary>
     /// Purge a deleted key encryption key
     /// </summary>
-    /// <param name="kekId">id of the KEK</param>
+    /// <param name="keyId">id of the KEK</param>
     /// <returns> The response message </returns>
-    public Task<Response> PurgeDeletedKekAsync(string kekId);
+    public Task<Response> PurgeDeletedKeyAsync(string keyId);
+
     /// <summary>
     /// Recover a deleted key encryption key
     /// </summary>

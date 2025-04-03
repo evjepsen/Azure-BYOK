@@ -11,6 +11,7 @@ using Infrastructure.Interfaces;
 using Infrastructure.Models;
 using Infrastructure.Options;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure;
@@ -22,9 +23,12 @@ public class AlertService : IAlertService
     private readonly string _subscriptionId;
     private readonly string _resourceGroupName;
     private readonly string _keyVaultResourceId;
+    private readonly ILogger<AlertService> _logger;
 
-    public AlertService(IHttpClientFactory httpClientFactory, IOptions<ApplicationOptions> applicationOptions)
+    public AlertService(IHttpClientFactory httpClientFactory, IOptions<ApplicationOptions> applicationOptions, ILoggerFactory loggerFactory)
     {
+        _logger = loggerFactory.CreateLogger<AlertService>();
+        
         TokenCredential credential = new DefaultAzureCredential();
 
         // Save the id's needed
@@ -88,6 +92,7 @@ public class AlertService : IAlertService
         // Add the new alert
         var resourceGroup = await GetResourceGroupAsync();
         
+        _logger.LogInformation("Adding new log alert for usage of key with id: {keyIdentifier}", keyIdentifier);
         var alertRules = resourceGroup.GetScheduledQueryRules();
         var newAlertOperation = await alertRules.CreateOrUpdateAsync(
             WaitUntil.Completed,
@@ -99,6 +104,7 @@ public class AlertService : IAlertService
 
         if (!newAlert.HasValue)
         {
+            _logger.LogError("Could not add the new log alert");
             throw new HttpRequestException("Could not add the new log alert");
         }
 
@@ -154,6 +160,7 @@ public class AlertService : IAlertService
         }
         
         // Add the new alert
+        _logger.LogInformation("Adding new activity alert for the key vault");
         var resourceGroup = await GetResourceGroupAsync();
         var alertRules = resourceGroup.GetActivityLogAlerts();
         var newAlertOperation = await alertRules.CreateOrUpdateAsync(
@@ -167,6 +174,7 @@ public class AlertService : IAlertService
 
         if (!newAlert.HasValue)
         {
+            _logger.LogError("Could not add the new activity alert");
             throw new HttpRequestException("Could not add the new activity alert");
         }
 
@@ -177,12 +185,14 @@ public class AlertService : IAlertService
     public async Task<bool> CheckForKeyVaultAlertAsync()
     {
         // Get all the activity alerts
+        _logger.LogInformation("Retrieving all activity alerts");
         var resourceGroup = await GetResourceGroupAsync();
         var alertRules = resourceGroup
             .GetActivityLogAlerts()
             .GetAllAsync();
 
         // Check that at least one is for the key vault
+        _logger.LogInformation("Checking that there is a key vault activity alert");
         var isThereKeyVaultAlert = false;
         await foreach (var alert in alertRules)
         {
@@ -239,6 +249,7 @@ public class AlertService : IAlertService
         }
         
         // Add the action group    
+        _logger.LogInformation("Creating a new action group with name: {name}", name);
         var actionGroups = resourceGroup.GetActionGroups();
         var newActionGroupOperation = await actionGroups.CreateOrUpdateAsync(
             WaitUntil.Completed,
@@ -251,7 +262,8 @@ public class AlertService : IAlertService
         
         if (!newActionGroup.HasValue)
         {
-            throw new HttpRequestException("Could not add the new action group");
+            _logger.LogError("Failed to create the new action group");   
+            throw new HttpRequestException("Failed to create the new action group");
         }
         
         return newActionGroup.Value;
@@ -260,11 +272,13 @@ public class AlertService : IAlertService
     public async Task<ActionGroupResource> GetActionGroupAsync(string actionGroupName)
     {
         var resourceGroup = await GetResourceGroupAsync();
+        _logger.LogInformation("Retrieving the action group {name}", actionGroupName);
         var actionGroup = await resourceGroup.GetActionGroupAsync(actionGroupName);
         
         if (!actionGroup.HasValue)
         {
-            throw new HttpRequestException("Could not access the action groups");
+            _logger.LogError("Could not access the action group");
+            throw new HttpRequestException("Could not access the action group");
         }
         
         return actionGroup.Value;
@@ -273,12 +287,14 @@ public class AlertService : IAlertService
     // Helper methods
     private async Task<ResourceGroupResource> GetResourceGroupAsync()
     {
+        _logger.LogInformation("Retrieving the resource group");
         var resourceGroup = await _armClient
             .GetSubscriptionResource(_subscriptionIdentifier)
             .GetResourceGroupAsync(_resourceGroupName);
 
         if (!resourceGroup.HasValue)
         {
+            _logger.LogError("Could not access the resource group");
             throw new HttpRequestException("Could not access the resource group");
         }
 

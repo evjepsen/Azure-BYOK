@@ -8,6 +8,7 @@ using Azure.Monitor.Query;
 using Azure.Monitor.Query.Models;
 using Infrastructure.Interfaces;
 using Infrastructure.Options;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure;
@@ -16,10 +17,16 @@ public class AuditService : IAuditService
 {
     private readonly LogsQueryClient _client;
     private readonly ApplicationOptions _applicationOptions;
+    private readonly ILogger<AuditService> _logger;
 
-    public AuditService(IOptions<ApplicationOptions> applicationOptions, IHttpClientFactory httpClientFactory)
+    public AuditService(IOptions<ApplicationOptions> applicationOptions, IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
     {
+        // Create the logger
+        _logger = loggerFactory.CreateLogger<AuditService>();
+        
+        // Get the application options
         _applicationOptions = applicationOptions.Value;
+        
         // Setup credentials for access
         var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions());        
         
@@ -33,6 +40,7 @@ public class AuditService : IAuditService
     public async Task<string> GetKeyOperationsPerformedAsync(int numOfDays)
     {
         // Ensures that the result is given in JSON format
+        _logger.LogInformation("Querying key operations performed");
         const string query = "AzureDiagnostics | where OperationName startswith \"key\" | extend PackedRecord = pack_all() | project PackedRecord";
         return await GetLogs(numOfDays, query);
     }
@@ -40,12 +48,14 @@ public class AuditService : IAuditService
     public async Task<string> GetVaultOperationsPerformedAsync(int numOfDays)
     {
         // Ensures that the result is given in JSON format
+        _logger.LogInformation("Querying vault operations performed");
         const string query = "AzureDiagnostics | where OperationName startswith \"vault\" | extend PackedRecord = pack_all() | project PackedRecord"; 
         return await GetLogs(numOfDays, query);
     }
 
     public async Task<string> GetKeyVaultActivityLogsAsync(int numOfDays)
     {
+        _logger.LogInformation("Querying key vault activity");
         const string query = """
                              AzureActivity 
                              | project-away Authorization, Claims, Properties
@@ -73,6 +83,7 @@ public class AuditService : IAuditService
 
         if (!result.HasValue || result.Value.Status != 0)
         {
+            _logger.LogWarning("Failed to get logs from Azure");
             throw new HttpRequestException("The query did not return any results");
         }
         

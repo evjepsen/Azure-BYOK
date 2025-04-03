@@ -18,12 +18,17 @@ public class AuthenticationController : Controller
     private readonly Dictionary<string,string> _schemeMap;
     private readonly List<string> _validEmails;
     private readonly ITokenService _tokenService;
+    private readonly ILogger<AuthenticationController> _logger;
 
     /// <summary>
     /// Constructor for the authentication controller
     /// </summary>
-    public AuthenticationController(IOptions<ApplicationOptions> applicationOptions, ITokenService tokenService)
+    public AuthenticationController(
+        IOptions<ApplicationOptions> applicationOptions, 
+        ITokenService tokenService,
+        ILoggerFactory loggerFactory)
     {
+        _logger = loggerFactory.CreateLogger<AuthenticationController>();
         _tokenService = tokenService;
         // Map over the valid authentication schemes
         _schemeMap = new Dictionary<string, string>
@@ -54,9 +59,11 @@ public class AuthenticationController : Controller
 
         if (!_schemeMap.TryGetValue(provider, out var scheme))
         {
+            _logger.LogWarning("The provider {provider} is not supported", provider);
             return BadRequest("The provider is not supported");
         }
         
+        _logger.LogInformation("Issuing the user a challenge for the provider {provider}", provider);
         return Challenge(properties, scheme);
     }
 
@@ -70,6 +77,7 @@ public class AuthenticationController : Controller
         
         if (!authResult.Succeeded)
         {
+            _logger.LogError("Authentication failed ({provider})", provider);
             return BadRequest("Authentication failed");
         }
         
@@ -80,6 +88,7 @@ public class AuthenticationController : Controller
         
         if (email == null || !_validEmails.Contains(email)) 
         {
+            _logger.LogInformation("User {email} tried to access the application", email);
             return Unauthorized("No access");
         }
 
@@ -92,6 +101,7 @@ public class AuthenticationController : Controller
             new("provider", provider),
         };
         
+        _logger.LogInformation("Generating the user {email} an access token", email);
         var accessToken = _tokenService.GenerateAccessToken(claims);
         
         // Return the access token for further use

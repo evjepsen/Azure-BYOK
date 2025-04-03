@@ -11,6 +11,7 @@ using Infrastructure.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Infrastructure.Models;
 using Infrastructure.Options;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure;
@@ -22,10 +23,16 @@ public class KeyVaultService : IKeyVaultService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly TokenCredential _tokenCredential;
     private readonly string[] _scopes;
-    private readonly ApplicationOptions _applicationOptions; 
+    private readonly ApplicationOptions _applicationOptions;
+    private readonly ILogger<KeyVaultService> _logger;
 
-    public KeyVaultService(ITokenService tokenService, IHttpClientFactory httpClientFactory, IOptions<ApplicationOptions> applicationOptions)
+    public KeyVaultService(ITokenService tokenService, 
+        IHttpClientFactory httpClientFactory, 
+        IOptions<ApplicationOptions> applicationOptions,
+        ILoggerFactory loggerFactory
+    )
     {
+        _logger = loggerFactory.CreateLogger<KeyVaultService>();
         _httpClientFactory = httpClientFactory;
         _tokenService = tokenService;
         _applicationOptions = applicationOptions.Value;
@@ -50,6 +57,7 @@ public class KeyVaultService : IKeyVaultService
     public async Task<KeyVaultUploadKeyResponse> UploadKey(string name, byte[] encryptedData, string kekId)
     {
         var httpClient = _httpClientFactory.CreateClient("WaitAndRetry");
+        
         // Create the BYOK Blob for upload
         var transferBlob = _tokenService.CreateKeyTransferBlob(encryptedData, kekId);
         
@@ -71,11 +79,13 @@ public class KeyVaultService : IKeyVaultService
             new AuthenticationHeaderValue("Bearer", authorizationToken.Token);
         
         // Send request
+        _logger.LogInformation("Uploading key to Azure Key Vault");
         var response = await httpClient.PostAsync(url, content);
         var responseContent = await response.Content.ReadAsStringAsync();
         
         if (!response.IsSuccessStatusCode)
         {
+            _logger.LogError("Failed to import key: {statusCode} - {responseContent}", response.StatusCode, responseContent);
             throw new HttpRequestException($"Failed to import key: {response.StatusCode} - {responseContent}");
         }
         
@@ -84,6 +94,7 @@ public class KeyVaultService : IKeyVaultService
 
         if (responseObject is null)
         {
+            _logger.LogError("Failed to deserialize the response from Azure");
             throw new JsonException("Could not deserialize the response from Azure");
         }
 
@@ -102,46 +113,59 @@ public class KeyVaultService : IKeyVaultService
             KeySize = 2048                                                          // Key size of 2048 bits 
         };
 
+        _logger.LogInformation("Creating RSA key encryption key");
         var kek = await _client.CreateRsaKeyAsync(keyOptions);
 
         if (!kek.HasValue)
         {
+            _logger.LogError("Failed to create key encryption key");
             throw new HttpRequestException("Failed to create key encryption key");
         }
 
         return kek.Value;
     }
     
-    public async Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekId)
+    public async Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekName)
     {
         // Get the key associated with the KEK ID
-        var res = await _client.GetKeyAsync(kekId);
+        _logger.LogInformation("Requesting the key encryption key with ID: {kekId}", kekName);
+        var res = await _client.GetKeyAsync(kekName);
 
         if (!res.HasValue)
         {
+            _logger.LogError("Failed to get the key encryption key with ID: {kekId}", kekName);
             throw new HttpRequestException("Failed to get the key");
         }
         
-        var key = res.Value.Key;
-        var pem = key.ToRSA().ExportRSAPublicKeyPem();
-        return new PublicKeyKekPem{PemString = pem};
+        var keyVaultKey = res.Value;
+        var pem = keyVaultKey.Key.ToRSA().ExportRSAPublicKeyPem();
+        
+        _logger.LogInformation("Returning the public key as PEM string");
+        return new PublicKeyKekPem
+        {
+            KekId = keyVaultKey.Id,
+            PemString = pem
+        };
     }
-    public async Task<DeletedKey> DeleteKekAsync(string kekId)
+    public async Task<DeletedKey> DeleteKeyAsync(string keyId)
     {
-        var deleteKeyOperationAsync = await _client.StartDeleteKeyAsync(kekId);
+        _logger.LogInformation("Deleting the key with ID: {keyId}", keyId);
+        var deleteKeyOperationAsync = await _client.StartDeleteKeyAsync(keyId);
         var res = await deleteKeyOperationAsync.WaitForCompletionAsync();
         
         if (!res.HasValue)
         {
+            _logger.LogError("Failed to delete the key with ID: {keyId}", keyId);
             throw new HttpRequestException("Failed to delete the key");
         }
         
         return res.Value;
     }
     
-    public async Task<Response> PurgeDeletedKekAsync(string kekId)
+    public async Task<Response> PurgeDeletedKeyAsync(string keyId)
     {
-        var purgeOperation = await _client.PurgeDeletedKeyAsync(kekId);
+        _logger.LogInformation("Purging the key with ID: {keyId}", keyId);
+        var purgeOperation = await _client.PurgeDeletedKeyAsync(keyId);
         
         return purgeOperation;
     }
