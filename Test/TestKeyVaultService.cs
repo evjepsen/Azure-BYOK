@@ -10,8 +10,8 @@ namespace Test;
 public class TestKeyVaultService
 {
     private ITokenService _tokenService;
-    private KeyVaultService _keyVaultService;
-    private KeyVaultManagementService _keyVaultManagementService;
+    private IKeyVaultService _keyVaultService;
+    private IKeyVaultManagementService _keyVaultManagementService;
     
     [SetUp]
     public void Setup()
@@ -113,37 +113,19 @@ public class TestKeyVaultService
     }
     
     [Test]
-    public async Task ShouldBeAbleToRecoverADeletedKek()
+    public async Task ShouldBeAbleToRecoverADeletedKey()
     {
         // Given a Key Encryption Key
-        var kekName = $"Random-recover-{Guid.NewGuid()}";
-        await _keyVaultService.GenerateKekAsync(kekName);
+        var keyName = $"Random-recover-{Guid.NewGuid()}";
+        await _keyVaultService.GenerateKekAsync(keyName);
         
         // Which I delete
-        await _keyVaultService.DeleteKeyAsync(kekName);
+        await _keyVaultService.DeleteKeyAsync(keyName);
         
         // When I ask to recover it
-        var recoverOp = await _keyVaultService.RecoverDeletedKekAsync(kekName);
+        var recoverOp = await _keyVaultService.RecoverDeletedKeyAsync(keyName);
         
         // Then it should be recovered and the operation should be completed
         Assert.That(recoverOp.HasCompleted, Is.EqualTo(true));
-    }
-    
-    [Test]
-    public async Task ShouldBeAbleToRotateAKek()
-    {
-        // Given a Key Encryption Key
-        var kekName = $"Random-rotate-{Guid.NewGuid()}";
-        var kek = await _keyVaultService.GenerateKekAsync(kekName);
-        
-        // When I ask to rotate it
-        var rotatedKek = await _keyVaultService.RotateKekAsync(kekName);
-        Assert.Multiple(() =>
-        {
-            // Then it should be rotated and the name of the key should be the same
-            Assert.That(rotatedKek.Name, Is.EqualTo(kek.Name));
-            // but the versions should be different
-            Assert.That(rotatedKek.Properties.Version, Is.Not.EqualTo(kek.Properties.Version));
-        });
     }
 }

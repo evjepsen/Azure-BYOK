@@ -72,7 +72,7 @@ public class KeyVaultService : IKeyVaultService
         // Add the authentication token
         var authorizationToken = await _tokenCredential.GetTokenAsync(
             new TokenRequestContext(_scopes),
-            default
+            CancellationToken.None
         );
         
         httpClient.DefaultRequestHeaders.Authorization =
@@ -170,28 +170,18 @@ public class KeyVaultService : IKeyVaultService
         return purgeOperation;
     }
 
-    public async Task<RecoverDeletedKeyOperation> RecoverDeletedKekAsync(string kekId)
+    public async Task<RecoverDeletedKeyOperation> RecoverDeletedKeyAsync(string keyName)
     {
-        var recoverOperation = await _client.StartRecoverDeletedKeyAsync(kekId);
-        var res = await recoverOperation.WaitForCompletionAsync();
+        _logger.LogInformation("Recovering the key with name: {keyName}", keyName);
+        var recoverOperation = await _client.StartRecoverDeletedKeyAsync(keyName);
+        await recoverOperation.WaitForCompletionAsync();
         
-        if (!res.HasValue)
+        if (!recoverOperation.HasCompleted)
         {
-            throw new HttpRequestException("Failed to recover the key encryption key");
+            _logger.LogError("Failed to recover the key {keyName}", keyName);
+            throw new HttpRequestException($"Failed to recover the key {keyName}");
         }
         
         return recoverOperation;
-    }
-
-    public async Task<KeyVaultKey> RotateKekAsync(string kekId)
-    {
-        var rotateOperation = await _client.RotateKeyAsync(kekId);
-        
-        if (!rotateOperation.HasValue)
-        {
-            throw new HttpRequestException("Failed to rotate the key");
-        }
-        
-        return rotateOperation.Value;
     }
 }

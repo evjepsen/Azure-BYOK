@@ -48,16 +48,9 @@ public interface IKeyVaultService
     public Task<Response> PurgeDeletedKeyAsync(string keyId);
 
     /// <summary>
-    /// Recover a deleted key encryption key
+    /// Recover a deleted key
     /// </summary>
-    /// <param name="kekId">id of the KEK</param>
+    /// <param name="keyName">id of the Key</param>
     /// <returns>The response message</returns>
-    public Task<RecoverDeletedKeyOperation> RecoverDeletedKekAsync(string kekId);
-    
-    /// <summary>
-    /// Rotate a key encryption key
-    /// </summary>
-    /// <param name="kekId">id of the KEK</param>
-    /// <returns>The response message</returns>
-    public Task<KeyVaultKey> RotateKekAsync(string kekId);
+    public Task<RecoverDeletedKeyOperation> RecoverDeletedKeyAsync(string keyName);
 }

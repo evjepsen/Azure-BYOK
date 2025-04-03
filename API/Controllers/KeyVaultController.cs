@@ -96,21 +96,11 @@ public class KeyVaultController : Controller
         _logger.LogInformation("Checking action groups exist");
         foreach (var actionGroupName in request.ActionGroups)
         {
-            try
+            var actionResult = await CheckActionGroupExists(actionGroupName);
+
+            if (actionResult is not OkResult)
             {
-                var actionGroup = await _alertService.GetActionGroupAsync(actionGroupName);
-                if (!actionGroup.HasData)
-                {
-                    return BadRequest($"The action group {actionGroupName} does not exist");
-                }
-            }
-            catch (RequestFailedException e)
-            {
-                return StatusCode(e.Status, e.ErrorCode);
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+                return actionResult;
             }
         }
         
@@ -126,7 +116,7 @@ public class KeyVaultController : Controller
             return BadRequest("Invalid base64 format for EncryptedKeyBase64");
         }
         
-        // Upload the key to Azure
+        // Try to upload the key to Azure
         _logger.LogInformation("Uploading the key to Azure");
         KeyVaultUploadKeyResponse response;
         try
@@ -144,7 +134,7 @@ public class KeyVaultController : Controller
             return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
         }
         
-        // Create an alert for the new key
+        // Try to create an alert for the new key
         _logger.LogInformation("Creating a log alert for the new key {keyName}", request.Name);
         try
         {
@@ -172,7 +162,7 @@ public class KeyVaultController : Controller
     /// <summary>
     /// Endpoint to get the public key part of a Key Encryption Key (KEK) in PEM format
     /// </summary>
-    /// <param name="kekName"></param>
+    /// <param name="kekName">The name of the key encryption key</param>
     /// <response code="200">Returns the public key of KEK in PEM format</response>
     /// <response code="404">Key not found</response>
     /// <response code="400">Bad request. See the error code for details</response>
@@ -270,6 +260,85 @@ public class KeyVaultController : Controller
         }
     }
     
+    /// <summary>
+    /// Recover a deleted key encryption key
+    /// </summary>
+    /// <param name="kekName">The name of the key to recover</param>
+    /// <response code="200">Deleted Key was recovered</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="404">Key not found</response>
+    /// <response code="500">Internal server error</response>
+    [HttpGet("recoverDeletedKey/{kekName}")]
+    public async Task<IActionResult> RecoverDeletedKeyEncryptionKey(string kekName)
+    {
+        try
+        {
+            // Check if the key vault is enabled for soft delete
+            var doesKeyVaultHaveSoftDelete = _keyVaultManagementService.DoesKeyVaultHaveSoftDeleteEnabled();
+            if (!doesKeyVaultHaveSoftDelete)
+            {
+                return BadRequest("The key vault is not enabled for soft delete");
+            }
+            _logger.LogInformation("Recovering the deleted key {kekName}", kekName);
+            var response = await _keyVaultService.RecoverDeletedKeyAsync(kekName);
+            return Ok(response);
+        }
+        catch (RequestFailedException e)
+        {
+            _logger.LogError("Azure failed to recover the key {keyName}: {errorMessage}", kekName, e.Message);
+            return StatusCode(e.Status, e.ErrorCode);
+        }
+        catch (Exception)
+        {
+            _logger.LogError("An unexpected error occurred while recovering the key {keyName}", kekName);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+    }
+
+    /// <summary>
+    /// Rotate a key encryption key
+    /// </summary>
+    /// <param name="request">The key rotate request</param>
+    /// <response code="200">Key was rotated</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="404">Key not found</response>
+    /// <response code="500">Internal server error</response>
+    [HttpPost("rotate")]
+    public async Task<IActionResult> RotateKeyEncryptionKey([FromBody] RotateKeyRequest request)
+    {
+        try
+        {
+            // Extract the key from base 64
+            byte[] encryptedKey;
+            try
+            {
+                encryptedKey = Convert.FromBase64String(request.EncryptedKeyBase64);
+            }
+            catch (FormatException)
+            {
+                _logger.LogError("The customer key was not in valid base64 format");
+                return BadRequest("Invalid base64 format for EncryptedKeyBase64");
+            }
+            
+            // Try to rotate the key
+            _logger.LogInformation("Rotating the key {keyName}", request.Name);
+            var response = await _keyVaultService.UploadKey(request.Name, encryptedKey, request.KeyEncryptionKeyId);
+            
+            return Ok(response);
+        }
+        catch (RequestFailedException e)
+        {
+            _logger.LogError("Azure failed to rotate the key {keyName}: {errorMessage}", request.Name, e.Message);
+            return StatusCode(e.Status, e.ErrorCode);
+        }
+        catch (Exception)
+        {
+            _logger.LogError("An unexpected error occurred while rotating the key {keyName}", request.Name);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+    }
+    
+    // Helper method to check if the action group exists
     private async Task<IActionResult> CheckActionGroupExists(string actionGroupName)
     {
         IActionResult actionResult = Ok();
@@ -294,62 +363,5 @@ public class KeyVaultController : Controller
         }
 
         return actionResult;
-    }
-    /// <summary>
-    /// Recover a deleted key encryption key
-    /// </summary>
-    /// <param name="kekName"></param>
-    /// <response code="200">Deleted Key was recovered</response>
-    /// <response code="400">Bad request</response>
-    /// <response code="404">Key not found</response>
-    /// <response code="500">Internal server error</response>
-    [HttpPost("recoverDeletedKey/{kekName}")]
-    public async Task<IActionResult> RecoverDeletedKeyEncryptionKey(string kekName)
-    {
-        try
-        {
-            // Check if the key vault is enabled for soft delete
-            var doesKeyVaultHaveSoftDelete = _keyVaultManagementService.DoesKeyVaultHaveSoftDeleteEnabled();
-            if (!doesKeyVaultHaveSoftDelete)
-            {
-                return BadRequest("The key vault is not enabled for soft delete");
-            }
-            var response = await _keyVaultService.RecoverDeletedKekAsync(kekName);
-            return Ok(response);
-        }
-        catch (RequestFailedException e)
-        {
-            return StatusCode(e.Status, e.ErrorCode);
-        }
-        catch (Exception)
-        {
-            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
-        }
-    }
-    
-    /// <summary>
-    /// Rotate a key encryption key
-    /// </summary>
-    /// <param name="kekName"></param>
-    /// <response code="200">Key was rotated</response>
-    /// <response code="400">Bad request</response>
-    /// <response code="404">Key not found</response>
-    /// <response code="500">Internal server error</response>
-    [HttpPost("rotate/{kekName}")]
-    public async Task<IActionResult> RotateKeyEncryptionKey(string kekName)
-    {
-        try
-        {
-            var response = await _keyVaultService.RotateKekAsync(kekName);
-            return Ok(response);
-        }
-        catch (RequestFailedException e)
-        {
-            return StatusCode(e.Status, e.ErrorCode);
-        }
-        catch (Exception)
-        {
-            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
-        }
     }
 }
