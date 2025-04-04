@@ -14,8 +14,9 @@ public interface IKeyVaultService
     /// </summary>
     /// <param name="name">Name of the TDE protector</param>
     /// <param name="transferBlobStrategy">The strategy used to create the transfer blob</param>
+    /// <param name="keyOperations">The operations allowed on the new key</param>
     /// <returns>The public information of the Azure Key Vault key that has been uploaded</returns>
-    public Task<KeyVaultUploadKeyResponse> UploadKey(string name, ITransferBlobStrategy transferBlobStrategy);
+    public Task<KeyVaultUploadKeyResponse> UploadKey(string name, ITransferBlobStrategy transferBlobStrategy, string[] keyOperations);
 
     /// <summary>
     /// Generate a Key Encryption Key (KEK) to protect the customer's TDE protector

@@ -16,7 +16,12 @@ public abstract class ImportKeyRequest
     /// The action groups that should be alerted on changes
     /// </summary>
     public required IEnumerable<string> ActionGroups { get; init; } 
-}
+    
+    /// <summary>
+    /// The valid key operations
+    /// </summary>
+    public required string[] KeyOperations { get; init; }
+ }
 
 /// <summary>
 /// The request body for the import key operation when the customer is uploading an

@@ -44,7 +44,7 @@ public class TestTokenService
         // Given a token service and a key transfer blob
         var keyTransferBlob = _tokenService.CreateKeyTransferBlob([], "KEK_ID");
         // When create the request body for an upload request
-        var requestBody = _tokenService.CreateBodyForRequest(keyTransferBlob);
+        var requestBody = _tokenService.CreateBodyForRequest(keyTransferBlob, ["encrypt", "decrypt"]);
         // Then it should be well-formed 
         Assert.IsNotEmpty(requestBody.Key.KeyHsm);
         Assert.IsNotNull(requestBody.Key.KeyOps);

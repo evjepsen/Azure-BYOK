@@ -57,7 +57,7 @@ public class TestKeyVaultService
         var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
         var transferBlobStrategy = new EncryptedKeyTransferBlobStrategy(kek.Id.ToString(), encryptedKey, _tokenService);
 
-        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy);
+        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy, ["encrypt", "decrypt"]);
         
         // Then it should be successful
         Assert.That(kvRes.Attributes.Enabled, Is.True);
@@ -147,7 +147,7 @@ public class TestKeyVaultService
         var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
         var transferBlobStrategy = new SpecifiedTransferBlobStrategy(transferBlob);
         
-        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy);
+        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy, ["encrypt", "decrypt", "sign", "verify", "wrapKey", "unwrapKey"]);
         
         // Then it should be successful
         Assert.That(kvRes.Attributes.Enabled, Is.True);

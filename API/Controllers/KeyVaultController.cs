@@ -5,7 +5,6 @@ using Infrastructure.TransferBlobStrategies;
 using Infrastructure.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
@@ -30,7 +29,7 @@ public class KeyVaultController : Controller
     /// <param name="alertService">The alert service used to interact with the Azure Alert System</param>
     /// <param name="keyVaultManagementService">The key vault management service used to interact with key vault settings</param>
     /// <param name="tokenService">The token service used when importing keys</param>
-    /// <param name="loggerFactory">The key logger factory for the key vault controller</param>
+    /// <param name="loggerFactory">The keylogger factory for the key vault controller</param>
     public KeyVaultController(IKeyVaultService keyVaultService, 
         IAlertService alertService, 
         IKeyVaultManagementService keyVaultManagementService, 
@@ -89,8 +88,9 @@ public class KeyVaultController : Controller
             _logger.LogWarning("The upload request could not be completed - the request body is invalid");
             return BadRequest("The request body is invalid (Properly JSON formatting error)");
         }
-      
-        var actionResult = await CheckValidityOfImportRequestAsync(request.ActionGroups.ToList());
+        
+        
+        var actionResult = await CheckValidityOfImportRequestAsync(request.ActionGroups.ToList(), request.KeyOperations);
 
         if (actionResult is not OkResult)
         {
@@ -121,8 +121,8 @@ public class KeyVaultController : Controller
             _logger.LogWarning("The upload request could not be completed - the request body is invalid");
             return BadRequest("The request body is invalid (Properly JSON formatting error)");
         }
-
-        var actionResult = await CheckValidityOfImportRequestAsync(request.ActionGroups.ToList());
+        
+        var actionResult = await CheckValidityOfImportRequestAsync(request.ActionGroups.ToList(), request.KeyOperations);
 
         if (actionResult is not OkResult)
         {
@@ -318,7 +318,7 @@ public class KeyVaultController : Controller
     }
 
     // Helper method to check that import request (both blob and encrypted) are valid
-    private async Task<IActionResult> CheckValidityOfImportRequestAsync(List<string> actionGroups)
+    private async Task<IActionResult> CheckValidityOfImportRequestAsync(List<string> actionGroups, string[] keyOperations)
     {
         // There must be an alert for key vault usage setup
         var isThereAKeyVaultAlert = await _alertService.CheckForKeyVaultAlertAsync();
@@ -329,7 +329,7 @@ public class KeyVaultController : Controller
         }
         
         // There must be at least one Action Group
-        if (!actionGroups.Any())
+        if (actionGroups.Count == 0)
         {
             return BadRequest("Missing an Action Group");
         }
@@ -345,7 +345,7 @@ public class KeyVaultController : Controller
             }
         }
 
-        return Ok();
+        return ValidateKeyOperations(keyOperations);
     }
     
     // Helper method to check if the action group exists
@@ -381,7 +381,7 @@ public class KeyVaultController : Controller
         KeyVaultUploadKeyResponse response;
         try
         {
-            response = await _keyVaultService.UploadKey(request.Name, transferBlobStrategy);
+            response = await _keyVaultService.UploadKey(request.Name, transferBlobStrategy, request.KeyOperations);
         }
         catch (HttpRequestException e)
         {
@@ -425,6 +425,15 @@ public class KeyVaultController : Controller
         // Try to rotate the key
         try
         {
+            _logger.LogInformation("Checking that the key operations are valid");
+            
+            var actionResultForKeyOperations = ValidateKeyOperations(request.KeyOperations);
+        
+            if (actionResultForKeyOperations is not OkResult)
+            {
+                return actionResultForKeyOperations;
+            }
+            
             // Check that the key exists
             var doesKeyExist = await _keyVaultService.CheckIfKeyExistsAsync(request.KeyName);
             
@@ -435,7 +444,7 @@ public class KeyVaultController : Controller
             }
             
             _logger.LogInformation("Rotating the key {keyName}", request.KeyName);
-            var response = await _keyVaultService.UploadKey(request.KeyName, strategy);
+            var response = await _keyVaultService.UploadKey(request.KeyName, strategy, request.KeyOperations);
             
             return Ok(response);
         }
@@ -451,4 +460,30 @@ public class KeyVaultController : Controller
         }
     }
     
+    // Helper method to validate the import/rotate request's key operations
+    private IActionResult ValidateKeyOperations(string[] keyOperations)
+    {
+        // Check that the key operations are valid
+        var validKeyOperations = new List<string>
+        {
+            "encrypt",
+            "decrypt",
+            "sign",
+            "verify",
+            "wrapKey",
+            "unwrapKey"
+        };
+
+        var invalidOperations = keyOperations
+            .Where(operation => !validKeyOperations.Contains(operation))
+            .ToList();
+
+        if (invalidOperations.Count != 0)
+        {
+            _logger.LogWarning("Invalid key operations detected in request: {InvalidActions}", string.Join(", ", invalidOperations));
+            return BadRequest($"The key operations are not valid: {string.Join(", ", invalidOperations)}");
+        }
+        
+        return Ok();
+    }
 }

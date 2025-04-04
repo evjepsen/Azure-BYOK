@@ -33,7 +33,7 @@ public class TokenService : ITokenService
         return keyTransferBlob;
     }
 
-    public UploadKeyRequestBody CreateBodyForRequest(KeyTransferBlob transferBlob)
+    public UploadKeyRequestBody CreateBodyForRequest(KeyTransferBlob transferBlob, string[] keyOperations)
     {
         // Encode the transfer blob in bytes
         _logger.LogInformation("Serializing key transfer blob into Json");
@@ -48,7 +48,7 @@ public class TokenService : ITokenService
             Key = new CustomJwk
             {
                 Kty = "RSA-HSM",
-                KeyOps = ["decrypt", "encrypt"],
+                KeyOps = keyOperations,
                 KeyHsm = transferBlobBase64Encoded
             },
             Attributes = new CustomJwkAttributes

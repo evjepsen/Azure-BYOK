@@ -53,14 +53,14 @@ public class KeyVaultService : IKeyVaultService
     }
 
 
-    public async Task<KeyVaultUploadKeyResponse> UploadKey(string name, ITransferBlobStrategy transferBlobStrategy)
+    public async Task<KeyVaultUploadKeyResponse> UploadKey(string name, ITransferBlobStrategy transferBlobStrategy, string[] keyOperations)
     {
         var httpClient = _httpClientFactory.CreateClient("WaitAndRetry");
         
         var transferBlob = transferBlobStrategy.GenerateTransferBlob();
         
         // (Manually) Set up the JsonWebKey
-        var requestBody = _tokenService.CreateBodyForRequest(transferBlob);
+        var requestBody = _tokenService.CreateBodyForRequest(transferBlob, keyOperations);
         var requestBodyAsJson = TokenHelper.SerializeJsonObject(requestBody);
         
         var url = $"{_applicationOptions.VaultUri}/keys/{name}/import?api-version=7.4";
