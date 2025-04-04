@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Azure.Security.KeyVault.Keys;
+using Infrastructure.Models;
 
 namespace FakeHSM.Interfaces;
 
@@ -11,6 +12,15 @@ public interface IFakeHsm
     /// <summary>
     /// Generate the "ciphertext" part of the Blob using a KeyVaultKey acting as a KEK
     /// </summary>
+    /// <param name="kek">The key encryption key from the key vault</param>
     /// <returns>Ciphertext</returns>
-    byte[] GeneratePrivateKeyForBlob(RSA rsaKey);
+    public string EncryptPrivateKeyForUpload(RSA kek);
+
+    /// <summary>
+    /// Generate a transfer blob for upload to the Azure Key Vault
+    /// </summary>
+    /// <param name="kek">The key encryption key from the key vault</param>
+    /// <param name="kekId">Id of the kek used</param>
+    /// <returns>The blob in json format</returns>
+    public KeyTransferBlob GenerateBlobForUpload(RSA kek, string kekId);
 }

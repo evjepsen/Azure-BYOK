@@ -8,7 +8,6 @@ using Azure.Identity;
 using Azure.Security.KeyVault.Keys;
 using Infrastructure.Helpers;
 using Infrastructure.Interfaces;
-using Microsoft.Extensions.Configuration;
 using Infrastructure.Models;
 using Infrastructure.Options;
 using Microsoft.Extensions.Logging;
@@ -54,12 +53,11 @@ public class KeyVaultService : IKeyVaultService
     }
 
 
-    public async Task<KeyVaultUploadKeyResponse> UploadKey(string name, byte[] encryptedData, string kekId)
+    public async Task<KeyVaultUploadKeyResponse> UploadKey(string name, ITransferBlobStrategy transferBlobStrategy)
     {
         var httpClient = _httpClientFactory.CreateClient("WaitAndRetry");
         
-        // Create the BYOK Blob for upload
-        var transferBlob = _tokenService.CreateKeyTransferBlob(encryptedData, kekId);
+        var transferBlob = transferBlobStrategy.GenerateTransferBlob();
         
         // (Manually) Set up the JsonWebKey
         var requestBody = _tokenService.CreateBodyForRequest(transferBlob);
@@ -147,6 +145,7 @@ public class KeyVaultService : IKeyVaultService
             PemString = pem
         };
     }
+    
     public async Task<DeletedKey> DeleteKeyAsync(string keyId)
     {
         _logger.LogInformation("Deleting the key with ID: {keyId}", keyId);
@@ -183,5 +182,22 @@ public class KeyVaultService : IKeyVaultService
         }
         
         return recoverOperation;
+    }
+
+    public async Task<bool> CheckIfKeyExistsAsync(string keyName)
+    {
+        bool doesKeyExist;
+        try
+        {
+            var response = await _client.GetKeyAsync(keyName);
+            doesKeyExist = response.HasValue;
+        }
+        catch (RequestFailedException ex)
+        {
+            if (ex.Status == 404) doesKeyExist = false;
+            else throw;
+        }
+        
+        return doesKeyExist;
     }
 }

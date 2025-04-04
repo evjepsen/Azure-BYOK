@@ -1,41 +1,33 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.Text;
 using Infrastructure.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 using Infrastructure.Helpers;
 using Infrastructure.Models;
-using Infrastructure.Options;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Infrastructure;
 
 public class TokenService : ITokenService
 {
-    private readonly JwtOptions _jwtOptions;
     private readonly ILogger<TokenService> _logger;
 
-    public TokenService(IOptions<JwtOptions> jwtOptions, ILoggerFactory loggerFactory)
+    public TokenService(ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<TokenService>();
-        _jwtOptions = jwtOptions.Value;
     }
     
-    public KeyTransferBlob CreateKeyTransferBlob(byte[] cipherText, string kekId)
+    public KeyTransferBlob CreateKeyTransferBlob(byte[] encryptedKey, string kekId)
     {
         _logger.LogInformation("Creating key transfer blob");
         var keyTransferBlob = new KeyTransferBlob
         {
-            SchemaVersion = "1.0.0",
             Header = new HeaderObject
             {
                 Kid = kekId, // The id of the KEK
                 Alg = "dir",
                 Enc = "CKM_RSA_AES_KEY_WRAP"
             },
-            Ciphertext = Base64UrlEncoder.Encode(cipherText),
-            Generator = "BYOK v1.0; Azure Key Vault"
+            Ciphertext = Base64UrlEncoder.Encode(encryptedKey)
         };
 
         return keyTransferBlob;
@@ -66,25 +58,5 @@ public class TokenService : ITokenService
         };
         
         return keyRequestBody;
-    }
-
-    public string GenerateAccessToken(List<Claim> claims)
-    {
-        _logger.LogInformation("Generating JWT access token");
-        var jwtTokenHandler = new JwtSecurityTokenHandler();
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-            _jwtOptions.Secret)
-        );
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        
-        var token = new JwtSecurityToken(
-            issuer: _jwtOptions.Issuer,
-            audience: _jwtOptions.Audience,
-            claims: claims,
-            expires: DateTime.Now.AddHours(1),
-            signingCredentials: credentials
-        );
-        
-        return jwtTokenHandler.WriteToken(token);
     }
 }

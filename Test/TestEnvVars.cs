@@ -4,6 +4,7 @@ using Test.TestHelpers;
 
 namespace Test;
 
+[TestFixture]
 public class TestEnvVars
 {
     private IOptions<ApplicationOptions> _applicationOptions;

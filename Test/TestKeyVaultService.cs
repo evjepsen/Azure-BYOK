@@ -1,12 +1,15 @@
 using Azure.Security.KeyVault.Keys;
+using FakeHSM;
 using Infrastructure;
 using Infrastructure.Interfaces;
+using Infrastructure.TransferBlobStrategies;
 using Microsoft.Extensions.Logging.Abstractions;
 using Test.TestHelpers;
 
 namespace Test;
 
-
+[TestFixture]
+[TestOf(typeof(KeyVaultService))]
 public class TestKeyVaultService
 {
     private ITokenService _tokenService;
@@ -19,7 +22,7 @@ public class TestKeyVaultService
         TestHelper.CreateTestConfiguration();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
         var configuration = TestHelper.CreateTestConfiguration();
-        _tokenService = new TokenService(TestHelper.CreateJwtOptions(configuration), new NullLoggerFactory());
+        _tokenService = new TokenService(new NullLoggerFactory());
         var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
         _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory, applicationOptions, new NullLoggerFactory());
         _keyVaultManagementService = new KeyVaultManagementService(applicationOptions, new NullLoggerFactory());
@@ -44,15 +47,17 @@ public class TestKeyVaultService
     [Test]
     public async Task ShouldBePossibleToEncryptKeyWithKekAndUpload()
     {
-        // Given a Key Encryption Key and transfer blob
+        // Given a Key Encryption Key and encrypted key
         var kekName = $"KEK-{Guid.NewGuid()}";
         var kek = await _keyVaultService.GenerateKekAsync(kekName);
-        var hsm = new FakeHSM.FakeHsm();
-        var encryptedKek = hsm.GeneratePrivateKeyForBlob(kek.Key.ToRSA());
-        var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
+        var hsm = new FakeHsm(_tokenService);
+        var encryptedKey = hsm.EncryptPrivateKeyForUpload(kek.Key.ToRSA());
         
         // When is ask to upload it
-        var kvRes = await _keyVaultService.UploadKey(newKeyName, encryptedKek, kek.Id.ToString());
+        var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
+        var transferBlobStrategy = new EncryptedKeyTransferBlobStrategy(kek.Id.ToString(), encryptedKey, _tokenService);
+
+        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy);
         
         // Then it should be successful
         Assert.That(kvRes.Attributes.Enabled, Is.True);
@@ -127,5 +132,50 @@ public class TestKeyVaultService
         
         // Then it should be recovered and the operation should be completed
         Assert.That(recoverOp.HasCompleted, Is.EqualTo(true));
+    }
+
+    [Test]
+    public async Task ShouldBePossibleToUploadAKeyBlobSpecifiedByAUser()
+    {
+        // Given a Key Encryption Key and transfer blob
+        var kekName = $"KEK-{Guid.NewGuid()}";
+        var kek = await _keyVaultService.GenerateKekAsync(kekName);
+        var hsm = new FakeHsm(_tokenService);
+        var transferBlob = hsm.GenerateBlobForUpload(kek.Key.ToRSA(), kek.Id.ToString());
+        
+        // When is ask to upload it
+        var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
+        var transferBlobStrategy = new SpecifiedTransferBlobStrategy(transferBlob);
+        
+        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy);
+        
+        // Then it should be successful
+        Assert.That(kvRes.Attributes.Enabled, Is.True);
+    }
+
+    [Test]
+    public async Task ShouldExistingKeyExist()
+    {
+        // Given a key in the key vault
+        var keyName = $"key-{Guid.NewGuid()}";
+        await _keyVaultService.GenerateKekAsync(keyName);
+        
+        // When I check whether it exists
+        var keyExists = await _keyVaultService.CheckIfKeyExistsAsync(keyName);
+        // Then it should
+        Assert.That(keyExists, Is.True);
+    }
+    
+    [Test]
+    public async Task ShouldKeyThatIsNotAddedNotExist()
+    {
+        // Given a key in the key vault
+        var keyName = $"key-{Guid.NewGuid()}";
+        
+        // When I check whether it exists
+        var keyExists = await _keyVaultService.CheckIfKeyExistsAsync(keyName);
+
+        // Then it should
+        Assert.That(keyExists, Is.False);
     }
 }

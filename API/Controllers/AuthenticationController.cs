@@ -17,7 +17,7 @@ public class AuthenticationController : Controller
 {
     private readonly Dictionary<string,string> _schemeMap;
     private readonly List<string> _validEmails;
-    private readonly ITokenService _tokenService;
+    private readonly IJwtService _jwtService;
     private readonly ILogger<AuthenticationController> _logger;
 
     /// <summary>
@@ -25,11 +25,11 @@ public class AuthenticationController : Controller
     /// </summary>
     public AuthenticationController(
         IOptions<ApplicationOptions> applicationOptions, 
-        ITokenService tokenService,
+        IJwtService jwtService,
         ILoggerFactory loggerFactory)
     {
+        _jwtService = jwtService;
         _logger = loggerFactory.CreateLogger<AuthenticationController>();
-        _tokenService = tokenService;
         // Map over the valid authentication schemes
         _schemeMap = new Dictionary<string, string>
         {
@@ -102,7 +102,7 @@ public class AuthenticationController : Controller
         };
         
         _logger.LogInformation("Generating the user {email} an access token", email);
-        var accessToken = _tokenService.GenerateAccessToken(claims);
+        var accessToken = _jwtService.GenerateAccessToken(claims);
         
         // Return the access token for further use
         return Ok(new {accessToken});

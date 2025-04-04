@@ -1,9 +1,11 @@
 using API.Models;
 using Azure;
 using Infrastructure.Interfaces;
+using Infrastructure.TransferBlobStrategies;
 using Infrastructure.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
@@ -18,6 +20,7 @@ public class KeyVaultController : Controller
     private readonly IKeyVaultService _keyVaultService;
     private readonly IAlertService _alertService;
     private readonly IKeyVaultManagementService _keyVaultManagementService;
+    private readonly ITokenService _tokenService;
     private readonly ILogger<KeyVaultController> _logger;
 
     /// <summary>
@@ -26,14 +29,18 @@ public class KeyVaultController : Controller
     /// <param name="keyVaultService">The key vault service used to interact with the Azure Key Vault</param>
     /// <param name="alertService">The alert service used to interact with the Azure Alert System</param>
     /// <param name="keyVaultManagementService">The key vault management service used to interact with key vault settings</param>
+    /// <param name="tokenService">The token service used when importing keys</param>
     /// <param name="loggerFactory">The key logger factory for the key vault controller</param>
     public KeyVaultController(IKeyVaultService keyVaultService, 
         IAlertService alertService, 
-        IKeyVaultManagementService keyVaultManagementService,
+        IKeyVaultManagementService keyVaultManagementService, 
+        ITokenService tokenService,
         ILoggerFactory loggerFactory)
+
     {
         _logger = loggerFactory.CreateLogger<KeyVaultController>();
         _keyVaultManagementService = keyVaultManagementService;
+        _tokenService = tokenService;
         _keyVaultService = keyVaultService;
         _alertService = alertService;
     }
@@ -73,90 +80,59 @@ public class KeyVaultController : Controller
     /// <response code="401">Unauthorized</response>
     /// <response code="404">If the key encryption key or action groups used don't exist</response>
     /// <response code="500">If there was an internal server error</response>
-    [HttpPost]
-    public async Task<IActionResult> ImportUserSpecifiedKey([FromBody] ImportKeyRequest request)
+    [HttpPost("/import/encryptedKey")]
+    public async Task<IActionResult> ImportUserSpecifiedEncryptedKey([FromBody] ImportEncryptedKeyRequest request)
     {
-        // There must be an alert for key vault usage setup
-        _logger.LogInformation("Checking key vault has key vault activity alert");
-        var isThereAKeyVaultAlert = await _alertService.CheckForKeyVaultAlertAsync();
+        // Check that the request (ImportEncryptedKeyRequest) object is valid
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("The upload request could not be completed - the request body is invalid");
+            return BadRequest("The request body is invalid (Properly JSON formatting error)");
+        }
+      
+        var actionResult = await CheckValidityOfImportRequestAsync(request.ActionGroups.ToList());
 
-        if (!isThereAKeyVaultAlert)
+        if (actionResult is not OkResult)
         {
-            _logger.LogWarning("Key vault is missing a key vault alert");
-            return BadRequest("Missing a key vault alert");
-        }
-        
-        // There must be at least one Action Group
-        if (!request.ActionGroups.Any())
-        {
-            return BadRequest("Missing an Action Group");
-        }
-        
-        // Each of them have to exist
-        _logger.LogInformation("Checking action groups exist");
-        foreach (var actionGroupName in request.ActionGroups)
-        {
-            var actionResult = await CheckActionGroupExists(actionGroupName);
-
-            if (actionResult is not OkResult)
-            {
-                return actionResult;
-            }
-        }
-        
-        // Extract the encrypted key
-        byte[] encryptedKey;
-        try
-        {
-            encryptedKey = Convert.FromBase64String(request.EncryptedKeyBase64);
-        }
-        catch (FormatException)
-        {
-            _logger.LogError("The customer key was not in valid base64 format");
-            return BadRequest("Invalid base64 format for EncryptedKeyBase64");
+            return actionResult;
         }
         
         // Try to upload the key to Azure
         _logger.LogInformation("Uploading the key to Azure");
-        KeyVaultUploadKeyResponse response;
-        try
-        { 
-            response = await _keyVaultService.UploadKey(request.Name, encryptedKey, request.KeyEncryptionKeyId);
-        }
-        catch (HttpRequestException e)
+        var transferBlobStrategy = new EncryptedKeyTransferBlobStrategy(request.KeyEncryptionKeyId, request.EncryptedKeyBase64, _tokenService);
+        return await ExecuteUploadWithErrorHandling(transferBlobStrategy, request);
+    }
+
+    /// <summary>
+    /// Endpoint used to import (into Azure) a user specified key transfer blob
+    /// </summary>
+    /// <param name="request">The Key Import request containing the transfer blob</param>
+    /// <response code="200">Returns the public part of the user specified key</response>
+    /// <response code="400">If the request is invalid</response>
+    /// <response code="401">Unauthorized</response>
+    /// <response code="404">If the key encryption key or action groups used don't exist</response>
+    /// <response code="500">If there was an internal server error</response>
+    [HttpPost("/import/blob")]
+    public async Task<IActionResult> ImportUserSpecifiedTransferBlob([FromBody] ImportKeyBlobRequest request)
+    {
+        // Check that the request (ImportKeyBlobRequest) object is valid
+        if (!ModelState.IsValid)
         {
-            _logger.LogError("Azure failed to import key {keyName}: {ErrorMessage}", request.Name, e.Message);
-            return BadRequest($"Azure failed to import key: {e.Message}");
+            _logger.LogWarning("The upload request could not be completed - the request body is invalid");
+            return BadRequest("The request body is invalid (Properly JSON formatting error)");
         }
-        catch (Exception)
+
+        var actionResult = await CheckValidityOfImportRequestAsync(request.ActionGroups.ToList());
+
+        if (actionResult is not OkResult)
         {
-            _logger.LogError("An unexpected error occurred when uploading the key {keyName}", request.Name);
-            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+            return actionResult;
         }
         
-        // Try to create an alert for the new key
-        _logger.LogInformation("Creating a log alert for the new key {keyName}", request.Name);
-        try
-        {
-            await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid!, request.ActionGroups);
-        }
-        catch (RequestFailedException e)
-        {
-            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}", request.Name, e.Message);
-            return StatusCode(e.Status, e.ErrorCode);
-        }
-        catch (HttpRequestException e)
-        {
-            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}", request.Name, e.Message);
-            return BadRequest($"Azure failed to create an alert for the uploaded key key: {e.Message}");
-        }
-        catch (Exception)
-        {
-            _logger.LogError("An unexpected error occurred when creating a key alert for the key {keyName}", request.Name);
-            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
-        }
-        
-        return Ok(response);
+        // Try to upload the key to Azure
+        _logger.LogInformation("Uploading the key to Azure");
+        var transferBlobStrategy = new SpecifiedTransferBlobStrategy(request.KeyTransferBlob);
+        return await ExecuteUploadWithErrorHandling(transferBlobStrategy, request);
     }
 
     /// <summary>
@@ -221,7 +197,7 @@ public class KeyVaultController : Controller
     /// <summary>
     /// Purge a deleted key
     /// </summary>
-    /// <param name="keyName"></param>
+    /// <param name="keyName">The name of the key to purge</param>
     /// <response code="204">Deleted Key was purged</response>
     /// <response code="404">Key not found</response>
     /// <response code="400">Bad request. See the error code for details</response>
@@ -269,7 +245,7 @@ public class KeyVaultController : Controller
     /// <response code="404">Key not found</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("recoverDeletedKey/{kekName}")]
-    public async Task<IActionResult> RecoverDeletedKeyEncryptionKey(string kekName)
+    public async Task<IActionResult> RecoverDeletedKey(string kekName)
     {
         try
         {
@@ -296,46 +272,80 @@ public class KeyVaultController : Controller
     }
 
     /// <summary>
-    /// Rotate a key encryption key
+    /// Rotate a key encryption key using the new encrypted key
     /// </summary>
     /// <param name="request">The key rotate request</param>
     /// <response code="200">Key was rotated</response>
     /// <response code="400">Bad request</response>
     /// <response code="404">Key not found</response>
     /// <response code="500">Internal server error</response>
-    [HttpPost("rotate")]
-    public async Task<IActionResult> RotateKeyEncryptionKey([FromBody] RotateKeyRequest request)
+    [HttpPost("rotate/encryptedKey")]
+    public async Task<IActionResult> RotateKeyUsingNewEncryptedKey([FromBody] RotateEncryptedKeyRequest request)
     {
-        try
+        // Check that the request (RotateEncryptedKeyRequest) object is valid
+        if (!ModelState.IsValid)
         {
-            // Extract the key from base 64
-            byte[] encryptedKey;
-            try
-            {
-                encryptedKey = Convert.FromBase64String(request.EncryptedKeyBase64);
-            }
-            catch (FormatException)
-            {
-                _logger.LogError("The customer key was not in valid base64 format");
-                return BadRequest("Invalid base64 format for EncryptedKeyBase64");
-            }
+            _logger.LogWarning("The upload request could not be completed - the request body is invalid");
+            return BadRequest("The request body is invalid (Properly JSON formatting error)");
+        }
+        
+        // Specify the strategy
+        var strategy = new EncryptedKeyTransferBlobStrategy(request.KeyEncryptionKeyId, request.EncryptedKeyBase64, _tokenService);
+        return await RotateKeyWithErrorHandling(request, strategy);
+    }
+    
+    /// <summary>
+    /// Rotate a key encryption key using the new encrypted key stored in a blob
+    /// </summary>
+    /// <param name="request">The key rotate request</param>
+    /// <response code="200">Key was rotated</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="404">Key not found</response>
+    /// <response code="500">Internal server error</response>
+    [HttpPost("rotate/blob")]
+    public async Task<IActionResult> RotateKeyUsingBlob([FromBody] RotateKeyBlobRequest request)
+    {
+        // Check that the request (RotateEncryptedKeyRequest) object is valid
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("The upload request could not be completed - the request body is invalid");
+            return BadRequest("The request body is invalid (Properly JSON formatting error)");
+        }
+        
+        // Specify the strategy
+        var strategy = new SpecifiedTransferBlobStrategy(request.KeyTransferBlob);
+        return await RotateKeyWithErrorHandling(request, strategy);
+    }
+
+    // Helper method to check that import request (both blob and encrypted) are valid
+    private async Task<IActionResult> CheckValidityOfImportRequestAsync(List<string> actionGroups)
+    {
+        // There must be an alert for key vault usage setup
+        var isThereAKeyVaultAlert = await _alertService.CheckForKeyVaultAlertAsync();
+
+        if (!isThereAKeyVaultAlert)
+        {
+            return BadRequest("Missing a key vault alert");
+        }
+        
+        // There must be at least one Action Group
+        if (!actionGroups.Any())
+        {
+            return BadRequest("Missing an Action Group");
+        }
+        
+        // Each of them have to exist
+        foreach (var actionGroupName in actionGroups)
+        {
+            var actionResult = await CheckActionGroupExists(actionGroupName);
             
-            // Try to rotate the key
-            _logger.LogInformation("Rotating the key {keyName}", request.Name);
-            var response = await _keyVaultService.UploadKey(request.Name, encryptedKey, request.KeyEncryptionKeyId);
-            
-            return Ok(response);
+            if (actionResult is not OkResult)
+            {
+                return actionResult;
+            }
         }
-        catch (RequestFailedException e)
-        {
-            _logger.LogError("Azure failed to rotate the key {keyName}: {errorMessage}", request.Name, e.Message);
-            return StatusCode(e.Status, e.ErrorCode);
-        }
-        catch (Exception)
-        {
-            _logger.LogError("An unexpected error occurred while rotating the key {keyName}", request.Name);
-            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
-        }
+
+        return Ok();
     }
     
     // Helper method to check if the action group exists
@@ -364,4 +374,81 @@ public class KeyVaultController : Controller
 
         return actionResult;
     }
+    
+    // Helper method to complete the upload
+    private async Task<IActionResult> ExecuteUploadWithErrorHandling(ITransferBlobStrategy transferBlobStrategy, ImportKeyRequest request)
+    {
+        KeyVaultUploadKeyResponse response;
+        try
+        {
+            response = await _keyVaultService.UploadKey(request.Name, transferBlobStrategy);
+        }
+        catch (HttpRequestException e)
+        {
+            _logger.LogError("Azure failed to import key {keyName}: {ErrorMessage}", request.Name, e.Message);
+            return BadRequest($"Azure failed to import key: {e.Message}");
+        }
+        catch (Exception)
+        {
+            _logger.LogError("An unexpected error occurred when uploading the key {keyName}", request.Name);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+        
+        // Try to create an alert for the new key
+        _logger.LogInformation("Creating a log alert for the new key {keyName}", request.Name);
+        try
+        {
+            await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid!, request.ActionGroups);
+        }
+        catch (RequestFailedException e)
+        {
+            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}", request.Name, e.Message);
+            return StatusCode(e.Status, e.ErrorCode);
+        }
+        catch (HttpRequestException e)
+        {
+            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}", request.Name, e.Message);
+            return BadRequest($"Azure failed to create an alert for the uploaded key key: {e.Message}");
+        }
+        catch (Exception)
+        {
+            _logger.LogError("An unexpected error occurred when creating a key alert for the key {keyName}", request.Name);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+        
+        return Ok(response);
+    }
+    
+    // Helper method to complete the rotation
+    private async Task<IActionResult> RotateKeyWithErrorHandling(RotateKeyRequest request, ITransferBlobStrategy strategy)
+    {
+        // Try to rotate the key
+        try
+        {
+            // Check that the key exists
+            var doesKeyExist = await _keyVaultService.CheckIfKeyExistsAsync(request.KeyName);
+            
+            if (!doesKeyExist)
+            {
+                _logger.LogWarning("The key {keyName} does not exist", request.KeyName);
+                return BadRequest("The key does not exist. Must add it using the import endpoint");
+            }
+            
+            _logger.LogInformation("Rotating the key {keyName}", request.KeyName);
+            var response = await _keyVaultService.UploadKey(request.KeyName, strategy);
+            
+            return Ok(response);
+        }
+        catch (RequestFailedException e)
+        {
+            _logger.LogError("Azure failed to rotate the key {keyName}: {errorMessage}", request.KeyName, e.Message);
+            return StatusCode(e.Status, e.ErrorCode);
+        }
+        catch (Exception)
+        {
+            _logger.LogError("An unexpected error occurred while rotating the key {keyName}", request.KeyName);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+    }
+    
 }

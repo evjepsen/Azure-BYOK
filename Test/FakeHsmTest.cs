@@ -11,26 +11,31 @@ namespace Test;
 public class FakeHsmTest
 {
     private IFakeHsm _fakeHsm;
+    private TokenService _tokenService;
 
     [SetUp]
     public void Setup()
     {
-        _fakeHsm = new FakeHsm();
+        _tokenService = new TokenService(new NullLoggerFactory());
+        _fakeHsm = new FakeHsm(_tokenService);
     }
+    
     [Test]
     public async Task ShouldBlobBeGenerated()
     {
         var configuration = TestHelper.CreateTestConfiguration();
-        var tokenService = new TokenService(TestHelper.CreateJwtOptions(configuration), new NullLoggerFactory());
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
-        var keyVaultService = new KeyVaultService(tokenService, httpClientFactory, TestHelper.CreateApplicationOptions(configuration), new NullLoggerFactory());
+        var keyVaultService = new KeyVaultService(_tokenService, 
+            httpClientFactory, 
+            TestHelper.CreateApplicationOptions(configuration), 
+            new NullLoggerFactory());
         
         var kekName = $"KEK-{Guid.NewGuid()}";
         var kek = await keyVaultService.GenerateKekAsync(kekName);
         // Given a key vault service and Key Encryption Key 
         
         // When I ask to generate a blob
-        var transferBlob = _fakeHsm.GeneratePrivateKeyForBlob(kek.Key.ToRSA());
+        var transferBlob = _fakeHsm.EncryptPrivateKeyForUpload(kek.Key.ToRSA());
         
         // Then it should be successful
         Assert.That(transferBlob, Is.Not.Null);

@@ -7,6 +7,8 @@ using Test.TestHelpers;
 
 namespace Test;
 
+[TestFixture]
+[TestOf(typeof(AlertService))]
 public class TestAlertService
 {
     private IAlertService _alertService;

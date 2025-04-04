@@ -1,6 +1,8 @@
 ﻿using System.Security.Cryptography;
-using Azure.Security.KeyVault.Keys;
 using FakeHSM.Interfaces;
+using Infrastructure.Helpers;
+using Infrastructure.Interfaces;
+using Infrastructure.Models;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Parameters;
@@ -10,13 +12,20 @@ namespace FakeHSM;
 
 public class FakeHsm : IFakeHsm
 {
-    private static byte[] GeneratePrivateRsaKey(int bitLength)
+    private ITokenService _tokenService;
+
+    public FakeHsm(ITokenService tokenService)
+    {
+        _tokenService = tokenService;
+    }
+
+    private byte[] GeneratePrivateRsaKey(int bitLength)
     {
         var rsa = RSA.Create(bitLength);
         var sk = rsa.ExportPkcs8PrivateKey();
         return sk;
     }
-    private static byte[] GenerateAesKey(int bitLength)
+    private byte[] GenerateAesKey(int bitLength)
     {
         // Generate the AES key
         var aes = Aes.Create();
@@ -25,7 +34,13 @@ public class FakeHsm : IFakeHsm
         return aes.Key;
     }
 
-    public byte[] GeneratePrivateKeyForBlob(RSA rsaKek)
+    public string EncryptPrivateKeyForUpload(RSA rsaKek)
+    {
+        var ciphertext = EncryptCustomerHsmChosenKey(rsaKek);
+        return Convert.ToBase64String(ciphertext);
+    }
+
+    private byte[] EncryptCustomerHsmChosenKey(RSA rsaKek)
     {
         // Generate the customer's private key
         var sk = GeneratePrivateRsaKey(2048);
@@ -63,6 +78,13 @@ public class FakeHsm : IFakeHsm
         Buffer.BlockCopy(encryptedKeyMaterial, 0, ciphertext, encryptedAesKey.Length, encryptedKeyMaterial.Length);
         
         return ciphertext;
+    }
+
+    public KeyTransferBlob GenerateBlobForUpload(RSA kek, string kekId)
+    {
+        var customerKey = EncryptCustomerHsmChosenKey(kek);
+        var blob = _tokenService.CreateKeyTransferBlob(customerKey, kekId);
+        return blob;
     }
 
     private byte[] AesKeyWrapWithPadding(byte[] keyToWrap, byte[] aesKey)
