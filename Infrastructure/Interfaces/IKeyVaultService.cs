@@ -59,4 +59,11 @@ public interface IKeyVaultService
     /// <param name="keyName">The name of the key to check</param>
     /// <returns>True when the key exists and false otherwise</returns>
     public Task<bool> CheckIfKeyExistsAsync(string keyName);
+    
+    /// <summary>
+    /// Checks whether the key operations are valid
+    /// </summary>
+    /// <param name="keyOperations">The key operations to validate</param>
+    /// <returns>An object containing the result and invalid key operations (if any)</returns>
+    public KeyOperationsValidationResult ValidateKeyOperations(string[] keyOperations);
 }

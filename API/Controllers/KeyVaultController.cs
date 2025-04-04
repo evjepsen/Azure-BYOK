@@ -90,7 +90,7 @@ public class KeyVaultController : Controller
         }
         
         
-        var actionResult = await CheckValidityOfImportRequestAsync(request.ActionGroups.ToList(), request.KeyOperations);
+        var actionResult = await CheckValidityOfImportRequestAsync(request);
 
         if (actionResult is not OkResult)
         {
@@ -122,7 +122,7 @@ public class KeyVaultController : Controller
             return BadRequest("The request body is invalid (Properly JSON formatting error)");
         }
         
-        var actionResult = await CheckValidityOfImportRequestAsync(request.ActionGroups.ToList(), request.KeyOperations);
+        var actionResult = await CheckValidityOfImportRequestAsync(request);
 
         if (actionResult is not OkResult)
         {
@@ -318,7 +318,7 @@ public class KeyVaultController : Controller
     }
 
     // Helper method to check that import request (both blob and encrypted) are valid
-    private async Task<IActionResult> CheckValidityOfImportRequestAsync(List<string> actionGroups, string[] keyOperations)
+    private async Task<IActionResult> CheckValidityOfImportRequestAsync(ImportKeyRequest request)
     {
         // There must be an alert for key vault usage setup
         var isThereAKeyVaultAlert = await _alertService.CheckForKeyVaultAlertAsync();
@@ -329,13 +329,13 @@ public class KeyVaultController : Controller
         }
         
         // There must be at least one Action Group
-        if (actionGroups.Count == 0)
+        if (request.ActionGroups.Any())
         {
             return BadRequest("Missing an Action Group");
         }
         
         // Each of them have to exist
-        foreach (var actionGroupName in actionGroups)
+        foreach (var actionGroupName in request.ActionGroups)
         {
             var actionResult = await CheckActionGroupExists(actionGroupName);
             
@@ -344,8 +344,15 @@ public class KeyVaultController : Controller
                 return actionResult;
             }
         }
+        
+        var keyOperationsValidationResult = _keyVaultService.ValidateKeyOperations(request.KeyOperations);
 
-        return ValidateKeyOperations(keyOperations);
+        if (!keyOperationsValidationResult.IsValid)
+        {
+            return BadRequest(keyOperationsValidationResult.ErrorMessage);
+        }
+
+        return Ok();
     }
     
     // Helper method to check if the action group exists
@@ -426,12 +433,11 @@ public class KeyVaultController : Controller
         try
         {
             _logger.LogInformation("Checking that the key operations are valid");
-            
-            var actionResultForKeyOperations = ValidateKeyOperations(request.KeyOperations);
-        
-            if (actionResultForKeyOperations is not OkResult)
+            var keyOperationsValidationResult = _keyVaultService.ValidateKeyOperations(request.KeyOperations);
+
+            if (!keyOperationsValidationResult.IsValid)
             {
-                return actionResultForKeyOperations;
+                return BadRequest(keyOperationsValidationResult.ErrorMessage);
             }
             
             // Check that the key exists
@@ -458,32 +464,5 @@ public class KeyVaultController : Controller
             _logger.LogError("An unexpected error occurred while rotating the key {keyName}", request.KeyName);
             return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
         }
-    }
-    
-    // Helper method to validate the import/rotate request's key operations
-    private IActionResult ValidateKeyOperations(string[] keyOperations)
-    {
-        // Check that the key operations are valid
-        var validKeyOperations = new List<string>
-        {
-            "encrypt",
-            "decrypt",
-            "sign",
-            "verify",
-            "wrapKey",
-            "unwrapKey"
-        };
-
-        var invalidOperations = keyOperations
-            .Where(operation => !validKeyOperations.Contains(operation))
-            .ToList();
-
-        if (invalidOperations.Count != 0)
-        {
-            _logger.LogWarning("Invalid key operations detected in request: {InvalidActions}", string.Join(", ", invalidOperations));
-            return BadRequest($"The key operations are not valid: {string.Join(", ", invalidOperations)}");
-        }
-        
-        return Ok();
     }
 }

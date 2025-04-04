@@ -200,4 +200,38 @@ public class KeyVaultService : IKeyVaultService
         
         return doesKeyExist;
     }
+
+    public KeyOperationsValidationResult ValidateKeyOperations(string[] keyOperations)
+    {
+        // Check that the key operations are valid
+        var validKeyOperations = new List<string>
+        {
+            "encrypt",
+            "decrypt",
+            "sign",
+            "verify",
+            "wrapKey",
+            "unwrapKey"
+        };
+
+        var invalidOperations = keyOperations
+            .Where(operation => !validKeyOperations.Contains(operation))
+            .ToList();
+
+        if (invalidOperations.Count != 0)
+        {
+            _logger.LogWarning("Invalid key operations detected in request: {InvalidActions}", string.Join(", ", invalidOperations));
+            return new KeyOperationsValidationResult
+            {
+                IsValid = false,
+                ErrorMessage = $"Invalid key operations detected: {string.Join(", ", invalidOperations)}"
+            };
+        }
+        
+        return new KeyOperationsValidationResult
+        {
+            IsValid = true,
+            ErrorMessage = string.Empty,
+        };
+    }
 }
