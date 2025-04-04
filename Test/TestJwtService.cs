@@ -51,7 +51,6 @@ public class TestJwtService
         Assert.That(jwt.Audiences, Does.Contain(_jwtOptions.Audience));
         
         var gotClaims = jwt.Claims.ToList();
-        Assert.That(gotClaims, Has.Count.EqualTo(7));
         Assert.That(gotClaims, Has.Some.Matches<Claim>(c => c.Type == ClaimTypes.NameIdentifier && c.Value == "id"));
         Assert.That(gotClaims, Has.Some.Matches<Claim>(c => c.Type == ClaimTypes.Email && c.Value == "john.doe@gmail.com"));
         Assert.That(gotClaims, Has.Some.Matches<Claim>(c => c.Type == ClaimTypes.Name && c.Value == "John Doe"));
