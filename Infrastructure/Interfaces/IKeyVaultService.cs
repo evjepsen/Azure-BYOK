@@ -34,9 +34,9 @@ public interface IKeyVaultService
     /// <summary>
     /// Asynchronously delete a key encryption key
     /// </summary>
-    /// <param name="keyId">id of the KEK</param>
+    /// <param name="keyName">id of the KEK</param>
     /// <returns> The response message</returns>
-    public Task<DeletedKey> DeleteKeyAsync(string keyId);
+    public Task<DeletedKey> DeleteKeyAsync(string keyName);
     
     /// <summary>
     /// Purge a deleted key encryption key

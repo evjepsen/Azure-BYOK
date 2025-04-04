@@ -6,11 +6,9 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.Monitor;
 using Azure.ResourceManager.Monitor.Models;
 using Azure.ResourceManager.Resources;
-using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
 using Infrastructure.Models;
 using Infrastructure.Options;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 

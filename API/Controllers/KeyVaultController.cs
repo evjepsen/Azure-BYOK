@@ -5,7 +5,6 @@ using Infrastructure.TransferBlobStrategies;
 using Infrastructure.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
@@ -30,7 +29,7 @@ public class KeyVaultController : Controller
     /// <param name="alertService">The alert service used to interact with the Azure Alert System</param>
     /// <param name="keyVaultManagementService">The key vault management service used to interact with key vault settings</param>
     /// <param name="tokenService">The token service used when importing keys</param>
-    /// <param name="loggerFactory">The key logger factory for the key vault controller</param>
+    /// <param name="loggerFactory">The keylogger factory for the key vault controller</param>
     public KeyVaultController(IKeyVaultService keyVaultService, 
         IAlertService alertService, 
         IKeyVaultManagementService keyVaultManagementService, 
@@ -398,22 +397,31 @@ public class KeyVaultController : Controller
         _logger.LogInformation("Creating a log alert for the new key {keyName}", request.Name);
         try
         {
-            await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid!, request.ActionGroups);
+            await _alertService.CreateAlertForKeyAsync($"{request.Name}-Key-Alert", response.Key.Kid!, request.ActionGroups);
         }
         catch (RequestFailedException e)
         {
-            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}", request.Name, e.Message);
+            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}",
+                request.Name, e.Message);
             return StatusCode(e.Status, e.ErrorCode);
         }
         catch (HttpRequestException e)
         {
-            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}", request.Name, e.Message);
+            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}",
+                request.Name, e.Message);
             return BadRequest($"Azure failed to create an alert for the uploaded key key: {e.Message}");
         }
         catch (Exception)
         {
-            _logger.LogError("An unexpected error occurred when creating a key alert for the key {keyName}", request.Name);
+            _logger.LogError("An unexpected error occurred when creating a key alert for the key {keyName}",
+                request.Name);
             return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+        // Delete the new key if creating the alert fails
+        finally
+        {
+            await _keyVaultService.DeleteKeyAsync(request.Name);
+            _logger.LogWarning("The key {keyName} was deleted because the alert could not be created", request.Name);
         }
         
         return Ok(response);
