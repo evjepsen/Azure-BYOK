@@ -12,9 +12,9 @@ public class CertificateCache : ICertificateCache
         _certificate = null;
     }
 
-    public X509Certificate2 GetCertificate()
+    public X509Certificate2? GetCertificate()
     {
-        return _certificate ?? throw new InvalidOperationException("Certificate not found.");
+        return _certificate;
     }
 
     public void AddCertificate(X509Certificate2 certificate)

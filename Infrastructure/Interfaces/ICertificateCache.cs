@@ -4,7 +4,7 @@ namespace Infrastructure.Interfaces;
 
 public interface ICertificateCache
 {
-    X509Certificate2 GetCertificate();
+    X509Certificate2? GetCertificate();
     
     void AddCertificate(X509Certificate2 certificate);
     

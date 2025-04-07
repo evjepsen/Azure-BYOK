@@ -3,7 +3,6 @@ using System.Security.Cryptography.X509Certificates;
 using Infrastructure.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using Sprache;
 
 namespace Test.TestHelpers;
 
@@ -32,10 +31,19 @@ public static class TestHelper
         return Options.Create(applicationOptions);
     }
     
-    public static X509Certificate2 CreateCertificate()
+    public static X509Certificate2 CreateCertificate(RSA rsa)
     {
-        var ecdsa = ECDsa.Create(); // generate asymmetric key pair
-        var req = new CertificateRequest("cn=foobar", ecdsa, HashAlgorithmName.SHA256);
-        return req.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(1));
+        var req = new CertificateRequest("cn=foobar", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var cert = req.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(1));
+        var certData = cert.Export(X509ContentType.Cert);
+        return new X509Certificate2(certData);
+    }
+
+    public static (string signature, string data) CreateSignature(RSA key)
+    {
+        var data = "Test data";
+        var dataBytes = System.Text.Encoding.UTF8.GetBytes(data);
+        var signature = key.SignData(dataBytes, HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1);
+        return (Convert.ToBase64String(signature), Convert.ToBase64String(dataBytes));
     }
 }
