@@ -5,7 +5,6 @@ using Infrastructure.Options;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Protocols.Configuration;
 
 namespace API.Controllers;
 

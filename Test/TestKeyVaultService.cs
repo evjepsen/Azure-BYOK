@@ -2,7 +2,6 @@ using Azure.Security.KeyVault.Keys;
 using FakeHSM;
 using Infrastructure;
 using Infrastructure.Interfaces;
-using Infrastructure.Models;
 using Infrastructure.TransferBlobStrategies;
 using Microsoft.Extensions.Logging.Abstractions;
 using Test.TestHelpers;

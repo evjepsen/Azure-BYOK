@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using Azure.Security.KeyVault.Keys;
 using Infrastructure.Models;
 
 namespace FakeHSM.Interfaces;

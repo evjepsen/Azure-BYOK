@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using System.Text;
 using Azure.Core;
 using Azure.Core.Pipeline;
 using Azure.Identity;
@@ -18,8 +17,7 @@ public class CertificateService : ICertificateService
     private readonly ILogger<CertificateService> _logger;
     private readonly CertificateClient _client;
     private readonly TokenCredential _tokenCredential;
-    private readonly IHttpClientFactory _httpClientFactory;
-    
+
     public CertificateService(
         IHttpClientFactory httpClientFactory, 
         IOptions<ApplicationOptions> applicationOptions,
@@ -28,7 +26,6 @@ public class CertificateService : ICertificateService
         )
     {
         _applicationOptions = applicationOptions.Value;
-        _httpClientFactory = httpClientFactory;
         _logger = loggerFactory.CreateLogger<CertificateService>();
         _tokenCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions());
         _applicationOptions = applicationOptions.Value;
@@ -37,7 +34,7 @@ public class CertificateService : ICertificateService
             _tokenCredential,
             new CertificateClientOptions() 
             {
-                Transport = new HttpClientTransport(_httpClientFactory.CreateClient("WaitAndRetry"))
+                Transport = new HttpClientTransport(httpClientFactory.CreateClient("WaitAndRetry"))
             }
         );
     }
