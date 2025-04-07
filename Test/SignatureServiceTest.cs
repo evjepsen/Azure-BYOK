@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using Infrastructure;
+using Infrastructure.Interfaces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Test.TestHelpers;
 
@@ -10,8 +10,14 @@ namespace Test;
 [TestOf(typeof(SignatureService))]
 public class SignatureServiceTest
 {
-    private SignatureService _signatureService;
-    private CertificateCache _certificateCache;
+    private ISignatureService _signatureService;
+    private ICertificateCache _certificateCache;
+
+    public SignatureServiceTest(ISignatureService signatureService, ICertificateCache certificateCache)
+    {
+        _signatureService = signatureService;
+        _certificateCache = certificateCache;
+    }
 
     [SetUp]
     public void Setup()
@@ -24,9 +30,10 @@ public class SignatureServiceTest
     [Test]
     public void ShouldThrowExceptionWhenCertificateNotFound()
     {
+        var data = "Test data"u8.ToArray();
         // Given a signature service 
         // When I ask check whether a signature is valid
-        var exception = Assert.Throws<InvalidOperationException>(() => _signatureService.IsSignatureValid("Test signature", "Test data"));
+        var exception = Assert.Throws<InvalidOperationException>(() => _signatureService.IsSignatureValid("Test signature", data));
 
         // Then it should throw an exception
         Assert.That(exception.Message, Is.EqualTo("No certificate was found."));

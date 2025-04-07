@@ -1,4 +1,6 @@
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using FakeHSM.Interfaces;
 using Infrastructure;
 using Infrastructure.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -32,7 +34,8 @@ public abstract class Program
         Console.WriteLine("PEM loaded...");
 
         var tokenService = new TokenService(new NullLoggerFactory());
-        var fakeHsm = new FakeHsm(tokenService);
+        var signatureService = new SignatureService(new CertificateCache(), new NullLoggerFactory());
+        var fakeHsm = new FakeHsm(tokenService, signatureService);
         
         Console.WriteLine("Generate blob? (y/n)");
         var generateBlob = Console.ReadLine();
@@ -54,10 +57,24 @@ public abstract class Program
         else
         {
             Console.WriteLine("Encrypting customer key...");
-            var base64 = fakeHsm.EncryptPrivateKeyForUpload(kek);
+            var encryptedKey = fakeHsm.EncryptPrivateKeyForUpload(kek);
         
-            Console.WriteLine($"Key ready to upload:\n{base64}");
+            Console.WriteLine($"Key ready to upload: {encryptedKey}");
+            
+            Console.WriteLine("Signing the key ");
+            var timeStamp = DateTime.UtcNow;
+            Console.WriteLine($"The timestamp is: {timeStamp:yyyy-MM-ddTHH:mm:ssK}");
+            var signature = fakeHsm.SignData(Convert.FromBase64String(encryptedKey), timeStamp);
+            Console.WriteLine($"Key signature: {signature}");
+            
         }
+        
+        Console.WriteLine("Generating self-signed certificate ...");
+        var cert = fakeHsm.GetCertificateForPrivateKey();
+        Console.WriteLine("Specify where the cert should be saved");
+        var file = Console.ReadLine();
+        Console.WriteLine($"Saving the certificate at '{file}/cert.crt'");
+        File.WriteAllBytes($"{file}/cert.cer", cert.Export(X509ContentType.Cert));
         
         Console.WriteLine("Press any key to exit...");
         Console.ReadKey();

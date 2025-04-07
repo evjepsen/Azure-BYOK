@@ -22,7 +22,7 @@ public abstract class ImportKeyRequest
     /// </summary>
     public required string[] KeyOperations { get; init; }
     
-    public required DateTime CreatedDate { get; init; }
+    public required DateTime CreatedTimeStamp { get; init; }
     
     public required string SignatureBase64 { get; init; }
  }

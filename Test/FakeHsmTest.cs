@@ -1,5 +1,6 @@
 using FakeHSM.Interfaces;
 using Infrastructure;
+using Infrastructure.Interfaces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Test.TestHelpers;
 using FakeHsm = FakeHSM.FakeHsm;
@@ -19,7 +20,8 @@ public class FakeHsmTest
     public void Setup()
     {
         _tokenService = new TokenService(new NullLoggerFactory());
-        _fakeHsm = new FakeHsm(_tokenService);
+        var signatureService = new SignatureService(new CertificateCache(), new NullLoggerFactory());
+        _fakeHsm = new FakeHsm(_tokenService, signatureService);
         var configuration = TestHelper.CreateTestConfiguration();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
         _keyVaultService = new KeyVaultService(_tokenService, 

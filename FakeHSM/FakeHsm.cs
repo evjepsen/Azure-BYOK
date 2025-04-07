@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using FakeHSM.Interfaces;
 using Infrastructure.Helpers;
 using Infrastructure.Interfaces;
@@ -12,11 +13,15 @@ namespace FakeHSM;
 
 public class FakeHsm : IFakeHsm
 {
-    private ITokenService _tokenService;
+    private readonly ITokenService _tokenService;
+    private readonly ISignatureService _signatureService;
+    private readonly RSA _privateKey;
 
-    public FakeHsm(ITokenService tokenService)
+    public FakeHsm(ITokenService tokenService, ISignatureService signatureService)
     {
         _tokenService = tokenService;
+        _signatureService = signatureService;
+        _privateKey = RSA.Create(2048);
     }
 
     private byte[] GeneratePrivateRsaKey(int bitLength)
@@ -25,6 +30,7 @@ public class FakeHsm : IFakeHsm
         var sk = rsa.ExportPkcs8PrivateKey();
         return sk;
     }
+    
     private byte[] GenerateAesKey(int bitLength)
     {
         // Generate the AES key
@@ -38,6 +44,21 @@ public class FakeHsm : IFakeHsm
     {
         var ciphertext = EncryptCustomerHsmChosenKey(rsaKek);
         return Convert.ToBase64String(ciphertext);
+    }
+
+    public string SignData(byte[] keyDataBase64, DateTime timeStamp)
+    {
+        var data = _signatureService.GetSignedData(keyDataBase64, timeStamp);
+        var signature = _privateKey.SignData(data, HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1);
+        return Convert.ToBase64String(signature);
+    }
+
+    public X509Certificate2 GetCertificateForPrivateKey()
+    {
+        var req = new CertificateRequest("cn=byok-foobar", _privateKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var cert = req.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(1));
+        var certData = cert.Export(X509ContentType.Cert);
+        return new X509Certificate2(certData);
     }
 
     private byte[] EncryptCustomerHsmChosenKey(RSA rsaKek)

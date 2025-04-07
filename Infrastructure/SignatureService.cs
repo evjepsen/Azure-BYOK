@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Infrastructure.Interfaces;
@@ -16,7 +17,7 @@ public class SignatureService : ISignatureService
         _certificateCache = certificateCache;
     }
 
-    public bool IsSignatureValid(string signatureBase64, string dataBase64)
+    public bool IsSignatureValid(string signatureBase64, byte[] data)
     {
         _logger.LogInformation("Verifying signature...");
         var certificate = _certificateCache.GetCertificate();
@@ -30,7 +31,6 @@ public class SignatureService : ISignatureService
         
         // Decode the base64 strings
         var signature = Convert.FromBase64String(signatureBase64);
-        var data = Convert.FromBase64String(dataBase64);
         
         // Create a new RSA object from the certificate
         using var rsa = certificate.GetRSAPublicKey();
@@ -42,5 +42,15 @@ public class SignatureService : ISignatureService
         }
         
         return rsa.VerifyData(data, signature, HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1);
+    }
+
+    public byte[] GetSignedData(byte[] keyData, DateTime timeStamp)
+    {
+        _logger.LogInformation("Setting up the data to verify the signature on");
+        
+        var timeStampAsString = timeStamp.ToString(CultureInfo.CurrentCulture);
+        var timestampData = System.Text.Encoding.UTF8.GetBytes(timeStampAsString);
+        
+        return keyData.Concat(timestampData).ToArray();
     }
 }

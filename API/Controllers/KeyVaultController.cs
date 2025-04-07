@@ -93,6 +93,32 @@ public class KeyVaultController : Controller
             _logger.LogWarning("The upload request could not be completed - the request body is invalid");
             return BadRequest("The request body is invalid (Properly JSON formatting error)");
         }
+
+        // Check that the signature is valid
+        var keyData = Convert.FromBase64String(request.EncryptedKeyBase64);
+        var data = _signatureService.GetSignedData(keyData, request.CreatedTimeStamp);
+        bool isSignatureValid;
+        try
+        {
+            isSignatureValid = _signatureService.IsSignatureValid(request.SignatureBase64, data);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("There was an error while checking the signature: {errorMessage}", e.Message);
+            return BadRequest("There was an error while checking the signature");
+        }
+
+        if (!isSignatureValid)
+        {
+            _logger.LogWarning("The signature is invalid");
+            return BadRequest("The signature is invalid");
+        }
+        
+        if (DateTime.UtcNow.AddMinutes(10) < request.CreatedTimeStamp || request.CreatedTimeStamp < DateTime.UtcNow.AddMinutes(-10))
+        {
+            _logger.LogWarning("The upload request is not longer valid");
+            return BadRequest("The upload request is not longer valid");
+        }
         
         var actionResult = await CheckValidityOfImportRequestAsync(request);
 
@@ -333,7 +359,7 @@ public class KeyVaultController : Controller
         }
         
         // There must be at least one Action Group
-        if (request.ActionGroups.Any())
+        if (!request.ActionGroups.Any())
         {
             return BadRequest("Missing an Action Group");
         }

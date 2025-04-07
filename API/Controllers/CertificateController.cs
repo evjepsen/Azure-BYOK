@@ -90,6 +90,6 @@ public class CertificateController : Controller
             return BadRequest("Error adding the certificate to the cache");
         }
         
-        return Ok();
+        return Ok("The certificate was uploaded successfully");
     }
 }

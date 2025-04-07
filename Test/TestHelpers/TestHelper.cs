@@ -39,11 +39,11 @@ public static class TestHelper
         return new X509Certificate2(certData);
     }
 
-    public static (string signature, string data) CreateSignature(RSA key)
+    public static (string signature, byte[] data) CreateSignature(RSA key)
     {
         var data = "Test data";
         var dataBytes = System.Text.Encoding.UTF8.GetBytes(data);
         var signature = key.SignData(dataBytes, HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1);
-        return (Convert.ToBase64String(signature), Convert.ToBase64String(dataBytes));
+        return (Convert.ToBase64String(signature), dataBytes);
     }
 }
