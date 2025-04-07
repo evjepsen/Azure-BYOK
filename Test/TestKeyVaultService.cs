@@ -15,7 +15,8 @@ public class TestKeyVaultService
     private ITokenService _tokenService;
     private IKeyVaultService _keyVaultService;
     private IKeyVaultManagementService _keyVaultManagementService;
-    
+    private readonly List<string> _createdKeys = [];
+
     [SetUp]
     public void Setup()
     {
@@ -34,6 +35,8 @@ public class TestKeyVaultService
         // Given a key vault service
         // When I ask to create a key encryption key
         var kekName = $"KEK-{Guid.NewGuid()}";
+        _createdKeys.Add(kekName);
+        
         var kek = await _keyVaultService.GenerateKekAsync(kekName);
         // Then it should be created and have the correct attributes
         Assert.That(kek.KeyOperations, Has.Count.EqualTo(1));
@@ -49,12 +52,16 @@ public class TestKeyVaultService
     {
         // Given a Key Encryption Key and encrypted key
         var kekName = $"KEK-{Guid.NewGuid()}";
+        _createdKeys.Add(kekName);
+        
         var kek = await _keyVaultService.GenerateKekAsync(kekName);
         var hsm = new FakeHsm(_tokenService);
         var encryptedKey = hsm.EncryptPrivateKeyForUpload(kek.Key.ToRSA());
         
         // When is ask to upload it
         var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
+        _createdKeys.Add(newKeyName);
+
         var transferBlobStrategy = new EncryptedKeyTransferBlobStrategy(kek.Id.ToString(), encryptedKey, _tokenService);
 
         var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy, ["encrypt", "decrypt"]);
@@ -67,11 +74,13 @@ public class TestKeyVaultService
     public async Task ShouldBePossibleToGetPublicKeyOfKekAsPem()
     {
         // Given a Key Encryption Key
-        var kekId = $"KEK-{Guid.NewGuid()}";
-        var kek = await _keyVaultService.GenerateKekAsync(kekId);
+        var kekName = $"KEK-{Guid.NewGuid()}";
+        _createdKeys.Add(kekName);
+        
+        var kek = await _keyVaultService.GenerateKekAsync(kekName);
         
         // When I ask to get the public key as PEM
-        var gotPem = await _keyVaultService.DownloadPublicKekAsPemAsync(kekId);
+        var gotPem = await _keyVaultService.DownloadPublicKekAsPemAsync(kekName);
         
         // Then the PEM should be the same as the one we generated
         var wantPem = kek.Key.ToRSA().ExportRSAPublicKeyPem();
@@ -122,6 +131,7 @@ public class TestKeyVaultService
     {
         // Given a Key Encryption Key
         var keyName = $"Random-recover-{Guid.NewGuid()}";
+        _createdKeys.Add(keyName);
         await _keyVaultService.GenerateKekAsync(keyName);
         
         // Which I delete
@@ -139,12 +149,16 @@ public class TestKeyVaultService
     {
         // Given a Key Encryption Key and transfer blob
         var kekName = $"KEK-{Guid.NewGuid()}";
+        _createdKeys.Add(kekName);
+        
         var kek = await _keyVaultService.GenerateKekAsync(kekName);
         var hsm = new FakeHsm(_tokenService);
         var transferBlob = hsm.GenerateBlobForUpload(kek.Key.ToRSA(), kek.Id.ToString());
         
         // When is ask to upload it
         var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
+        _createdKeys.Add(newKeyName);
+        
         var transferBlobStrategy = new SpecifiedTransferBlobStrategy(transferBlob);
         
         var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy, ["encrypt", "decrypt", "sign", "verify", "wrapKey", "unwrapKey"]);
@@ -158,6 +172,8 @@ public class TestKeyVaultService
     {
         // Given a key in the key vault
         var keyName = $"key-{Guid.NewGuid()}";
+        _createdKeys.Add(keyName);
+        
         await _keyVaultService.GenerateKekAsync(keyName);
         
         // When I check whether it exists
@@ -201,4 +217,13 @@ public class TestKeyVaultService
         Assert.That(result.IsValid, Is.False);
         Assert.That(result.ErrorMessage, Is.EqualTo("Invalid key operations detected: abc"));
     } 
+    
+    [OneTimeTearDown]
+    public async Task TearDown()
+    {
+        foreach (var key in _createdKeys)
+        {
+            await _keyVaultService.DeleteKeyAsync(key);
+        }
+    }
 }

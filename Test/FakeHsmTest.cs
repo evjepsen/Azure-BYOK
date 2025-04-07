@@ -12,26 +12,30 @@ public class FakeHsmTest
 {
     private IFakeHsm _fakeHsm;
     private TokenService _tokenService;
+    private readonly List<string> _createdKeys = [];
+    private KeyVaultService _keyVaultService;
 
     [SetUp]
     public void Setup()
     {
         _tokenService = new TokenService(new NullLoggerFactory());
         _fakeHsm = new FakeHsm(_tokenService);
+        var configuration = TestHelper.CreateTestConfiguration();
+        IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
+        _keyVaultService = new KeyVaultService(_tokenService, 
+            httpClientFactory, 
+            TestHelper.CreateApplicationOptions(configuration), 
+            new NullLoggerFactory());
     }
     
     [Test]
     public async Task ShouldBlobBeGenerated()
     {
-        var configuration = TestHelper.CreateTestConfiguration();
-        IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
-        var keyVaultService = new KeyVaultService(_tokenService, 
-            httpClientFactory, 
-            TestHelper.CreateApplicationOptions(configuration), 
-            new NullLoggerFactory());
         
         var kekName = $"KEK-{Guid.NewGuid()}";
-        var kek = await keyVaultService.GenerateKekAsync(kekName);
+        _createdKeys.Add(kekName);
+        
+        var kek = await _keyVaultService.GenerateKekAsync(kekName);
         // Given a key vault service and Key Encryption Key 
         
         // When I ask to generate a blob
@@ -39,5 +43,14 @@ public class FakeHsmTest
         
         // Then it should be successful
         Assert.That(transferBlob, Is.Not.Null);
+    }
+
+    [OneTimeTearDown]
+    public async Task TearDown()
+    {
+        foreach (var key in _createdKeys)
+        {
+            await _keyVaultService.DeleteKeyAsync(key);
+        }
     }
 }
