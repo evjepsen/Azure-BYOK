@@ -146,15 +146,15 @@ public class KeyVaultService : IKeyVaultService
         };
     }
     
-    public async Task<DeletedKey> DeleteKeyAsync(string keyId)
+    public async Task<DeletedKey> DeleteKeyAsync(string keyName)
     {
-        _logger.LogInformation("Deleting the key with ID: {keyId}", keyId);
-        var deleteKeyOperationAsync = await _client.StartDeleteKeyAsync(keyId);
+        _logger.LogInformation("Deleting the key with name: {keyName}", keyName);
+        var deleteKeyOperationAsync = await _client.StartDeleteKeyAsync(keyName);
         var res = await deleteKeyOperationAsync.WaitForCompletionAsync();
         
         if (!res.HasValue)
         {
-            _logger.LogError("Failed to delete the key with ID: {keyId}", keyId);
+            _logger.LogError("Failed to delete the key with ID: {keyId}", keyName);
             throw new HttpRequestException("Failed to delete the key");
         }
         

@@ -403,24 +403,35 @@ public class KeyVaultController : Controller
         
         // Try to create an alert for the new key
         _logger.LogInformation("Creating a log alert for the new key {keyName}", request.Name);
+        bool created;
         try
         {
-            await _alertService.CreateAlertForKeyAsync($"{request.Name}-A", response.Key.Kid!, request.ActionGroups);
+            await _alertService.CreateAlertForKeyAsync($"{request.Name}-Key-Alert", response.Key.Kid!, request.ActionGroups);
+            created = true;
         }
         catch (RequestFailedException e)
         {
-            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}", request.Name, e.Message);
+            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}",
+                request.Name, e.Message);
             return StatusCode(e.Status, e.ErrorCode);
         }
         catch (HttpRequestException e)
         {
-            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}", request.Name, e.Message);
+            _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}",
+                request.Name, e.Message);
             return BadRequest($"Azure failed to create an alert for the uploaded key key: {e.Message}");
         }
         catch (Exception)
         {
-            _logger.LogError("An unexpected error occurred when creating a key alert for the key {keyName}", request.Name);
+            _logger.LogError("An unexpected error occurred when creating a key alert for the key {keyName}",
+                request.Name);
             return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
+        // Delete the new key if creating the alert fails
+        if (!created)
+        {
+            await _keyVaultService.DeleteKeyAsync(request.Name);
+            _logger.LogWarning("The key {keyName} was deleted because the alert could not be created", request.Name);
         }
         
         return Ok(response);
