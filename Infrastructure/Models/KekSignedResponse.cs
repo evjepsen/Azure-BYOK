@@ -2,6 +2,9 @@ using Azure.Security.KeyVault.Keys;
 
 namespace Infrastructure.Models;
 
+/// <summary>
+/// Signed response from the Key Vault of the KEK
+/// </summary>
 public class KekSignedResponse
 {
     public required KeyVaultKey Kek { get; init; }

@@ -126,20 +126,18 @@ public class KeyVaultService : IKeyVaultService
         
         // Get the PEM string
         var pemString = kek.Key.ToRSA().ExportRSAPublicKeyPem();
-        // var pemBytes = Encoding.UTF8.GetBytes(pemString);
+        // marshall the Key Vault Key 
         var kekMarshaled = TokenHelper.SerializeJsonObject(kek);
-        // var kekBytes = Encoding.UTF8.GetBytes(kekMarshaled);
-        // concatenate kek and pem
+        // Concatenate kek and pem
         var kekAndPem = Encoding.UTF8.GetBytes(kekMarshaled + pemString);
-        Console.WriteLine($"Concatenated: {kekMarshaled + pemString}");
 
-        var signature = await _certificateService.SignKeyWithCertificateAsync(kekAndPem);
+        var singResult = await _certificateService.SignAsync(kekAndPem);
 
         var kekSignedResponse = new KekSignedResponse()
         {
             Kek = kek,
             PemString = pemString,
-            Base64EncodedSignature = Convert.ToBase64String(signature.Signature),
+            Base64EncodedSignature = Convert.ToBase64String(singResult.Signature),
         };
         
         return kekSignedResponse;

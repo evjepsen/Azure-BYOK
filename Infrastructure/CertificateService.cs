@@ -48,7 +48,7 @@ public class CertificateService : ICertificateService
         
         return digest;
     }
-    public async Task<SignResult> SignKeyWithCertificateAsync(byte[] dataToSign)
+    public async Task<SignResult> SignAsync(byte[] dataToSign)
     {
         var credential = new DefaultAzureCredential();
         // Get the certificate
@@ -58,8 +58,7 @@ public class CertificateService : ICertificateService
         // Create a CryptographyClient using the ID of the certificate
         var cryptoClient = new CryptographyClient(certId, credential);
         
-        // Prepare data for signing 
-        // Using the RS256 algorithm, prehashed data and base64url is expected
+        // Prepare data for signing, should be pre-hashed
         var hash = DigestData(dataToSign);
         
         // Sign the data using the CryptographyClient
@@ -69,7 +68,7 @@ public class CertificateService : ICertificateService
         return signResult;
     }
 
-    public async Task<VerifyResult> VerifyCertificateAsync(byte[] dataToVerify, byte[] signature)
+    public async Task<VerifyResult> VerifyAsync(byte[] dataToVerify, byte[] signature)
     {
         // Get the certificate
         var certWithPolicy = await _client.GetCertificateAsync(_applicationOptions.SigningCertificateName);
@@ -78,6 +77,7 @@ public class CertificateService : ICertificateService
         // Create a CryptographyClient using the ID of the certificate
         var cryptoClient = new CryptographyClient(certId, new DefaultAzureCredential());
         
+        // Prepare data for signing, should be pre-hashed
         var digestToVerify = DigestData(dataToVerify);
 
         // Verify the signature using the CryptographyClient
