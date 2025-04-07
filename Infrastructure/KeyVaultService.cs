@@ -148,7 +148,7 @@ public class KeyVaultService : IKeyVaultService
     
     public async Task<DeletedKey> DeleteKeyAsync(string keyName)
     {
-        _logger.LogInformation("Deleting the key with ID: {keyId}", keyName);
+        _logger.LogInformation("Deleting the key with name: {keyName}", keyName);
         var deleteKeyOperationAsync = await _client.StartDeleteKeyAsync(keyName);
         var res = await deleteKeyOperationAsync.WaitForCompletionAsync();
         
