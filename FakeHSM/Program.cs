@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using FakeHSM.Interfaces;
 using Infrastructure;
 using Infrastructure.Helpers;
+using Infrastructure.Options;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FakeHSM;
@@ -32,10 +32,9 @@ public abstract class Program
         var kek = RSA.Create();
         kek.ImportFromPem(pem);
         Console.WriteLine("PEM loaded...");
-
+        
         var tokenService = new TokenService(new NullLoggerFactory());
-        var signatureService = new SignatureService(new CertificateCache(), new NullLoggerFactory());
-        var fakeHsm = new FakeHsm(tokenService, signatureService);
+        var fakeHsm = new FakeHsm(tokenService);
         
         Console.WriteLine("Generate blob? (y/n)");
         var generateBlob = Console.ReadLine();

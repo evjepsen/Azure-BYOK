@@ -33,7 +33,7 @@ public static class TestHelper
     
     public static X509Certificate2 CreateCertificate(RSA rsa)
     {
-        var req = new CertificateRequest("cn=foobar", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var req = new CertificateRequest("cn=Customer HSM", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         var cert = req.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(1));
         var certData = cert.Export(X509ContentType.Cert);
         return new X509Certificate2(certData);

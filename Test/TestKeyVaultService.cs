@@ -24,12 +24,17 @@ public class TestKeyVaultService
     {
         TestHelper.CreateTestConfiguration();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
+        
         var configuration = TestHelper.CreateTestConfiguration();
         _tokenService = new TokenService(new NullLoggerFactory());
+        
         var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
+        
         _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory, applicationOptions, new NullLoggerFactory());
         _keyVaultManagementService = new KeyVaultManagementService(applicationOptions, new NullLoggerFactory());
-        _hsm = new FakeHsm(_tokenService, new SignatureService(new CertificateCache(), new NullLoggerFactory()));
+        
+        var certificateCache = new CertificateCache(new NullLoggerFactory(), applicationOptions);
+        _hsm = new FakeHsm(_tokenService);
     }
 
     [Test]

@@ -28,10 +28,10 @@ public interface IFakeHsm
     /// <summary>
     /// Sign the data using private key
     /// </summary>
-    /// <param name="keyDataBase64">Data to sign</param>
+    /// <param name="keyData">Data to sign</param>
     /// <param name="timeStamp">The timestamp of signing</param>
     /// <returns>The data signature in base64</returns>
-    public string SignData(byte[] keyDataBase64, DateTime timeStamp);
+    public string SignData(byte[] keyData, DateTime timeStamp);
     
     /// <summary>
     /// Gets a self-signed certificate for the private key

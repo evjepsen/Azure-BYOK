@@ -21,4 +21,7 @@ public class ApplicationOptions
     [Required(ErrorMessage = "Allowed emails is required")]
     [MinLength(1)]
     public List<string> AllowedEmails { get; set; } = new(); 
+    
+    [Required(ErrorMessage = "HSM certificate issuer")]
+    public string ValidIssuer { get; set; } = string.Empty; 
 }

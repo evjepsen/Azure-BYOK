@@ -19,14 +19,16 @@ public class FakeHsmTest
     [SetUp]
     public void Setup()
     {
-        _tokenService = new TokenService(new NullLoggerFactory());
-        var signatureService = new SignatureService(new CertificateCache(), new NullLoggerFactory());
-        _fakeHsm = new FakeHsm(_tokenService, signatureService);
         var configuration = TestHelper.CreateTestConfiguration();
+        var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
+
+        
+        _tokenService = new TokenService(new NullLoggerFactory());
+        _fakeHsm = new FakeHsm(_tokenService);
         _keyVaultService = new KeyVaultService(_tokenService, 
             httpClientFactory, 
-            TestHelper.CreateApplicationOptions(configuration), 
+            applicationOptions, 
             new NullLoggerFactory());
     }
     

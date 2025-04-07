@@ -22,8 +22,11 @@ public class SignatureServiceTest
     [SetUp]
     public void Setup()
     {
+        var configuration = TestHelper.CreateTestConfiguration();
+        var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
+        
         // Initialize the certificate cache and signature service
-        _certificateCache = new CertificateCache();
+        _certificateCache = new CertificateCache(new NullLoggerFactory(), applicationOptions);
         _signatureService = new SignatureService(_certificateCache, new NullLoggerFactory());
     }
     

@@ -1,19 +1,27 @@
 using System.Security.Cryptography.X509Certificates;
 using Infrastructure.Interfaces;
+using Infrastructure.Options;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure;
 
 public class CertificateCache : ICertificateCache
 {
     private X509Certificate2? _certificate;
+    private readonly ILogger<CertificateCache> _logger;
+    private readonly ApplicationOptions _applicationOption;
 
-    public CertificateCache()
+    public CertificateCache(ILoggerFactory loggerFactory, IOptions<ApplicationOptions> applicationOption)
     {
         _certificate = null;
+        _logger = loggerFactory.CreateLogger<CertificateCache>();
+        _applicationOption = applicationOption.Value;
     }
 
     public X509Certificate2? GetCertificate()
     {
+        _logger.LogInformation("Getting the certificate from the cache");
         return _certificate;
     }
 
@@ -23,6 +31,7 @@ public class CertificateCache : ICertificateCache
 
         if (isCertificateValid)
         {
+            _logger.LogInformation("Adding the certificate to the cache");
             _certificate = certificate;
         } else 
         {
@@ -34,6 +43,36 @@ public class CertificateCache : ICertificateCache
     {
         // Dummy implementation for the prototype
         // In a real implementation, you would check the certificate's validity
+        // That it is not expired, revoked, etc.
+        // And signed by a trusted CA and so on
+        
+        // Check that it is still valid
+        _logger.LogInformation("Validating the certificate");
+        if (DateTime.Now > certificate.NotAfter || DateTime.Now < certificate.NotBefore)
+        {
+            _logger.LogInformation("The certificate is expired");
+            return false;
+        }
+        
+        // Check that the issuer is the specified issuer
+        var issuer = certificate.Issuer;
+        if (!issuer.Equals(_applicationOption.ValidIssuer, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation("The certificate was not issued by a valid issuer");
+            return false;
+        }
+        
+        using var chain = new X509Chain();
+        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+        chain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
+        
+        var isValid = chain.Build(certificate);
+        if (!isValid)
+        {
+            return chain.ChainStatus
+                .Any(status => status.Status != X509ChainStatusFlags.UntrustedRoot);
+        }
+        
         return true;
     }
 }
