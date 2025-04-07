@@ -143,29 +143,6 @@ public class KeyVaultService : IKeyVaultService
         return kekSignedResponse;
     }
     
-    public async Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekName)
-    {
-        // Get the key associated with the KEK ID
-        _logger.LogInformation("Requesting the key encryption key with ID: {kekId}", kekName);
-        var res = await _client.GetKeyAsync(kekName);
-
-        if (!res.HasValue)
-        {
-            _logger.LogError("Failed to get the key encryption key with ID: {kekId}", kekName);
-            throw new HttpRequestException("Failed to get the key");
-        }
-        
-        var keyVaultKey = res.Value;
-        var pem = keyVaultKey.Key.ToRSA().ExportRSAPublicKeyPem();
-        
-        _logger.LogInformation("Returning the public key as PEM string");
-        return new PublicKeyKekPem
-        {
-            KekId = keyVaultKey.Id,
-            PemString = pem
-        };
-    }
-    
     public async Task<DeletedKey> DeleteKeyAsync(string keyId)
     {
         _logger.LogInformation("Deleting the key with ID: {keyId}", keyId);

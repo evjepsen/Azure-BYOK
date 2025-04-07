@@ -26,13 +26,6 @@ public interface IKeyVaultService
     public Task<KekSignedResponse> GenerateKekAsync(string name);
     
     /// <summary>
-    /// Download public key of the KEK in PEM format
-    /// </summary>
-    /// <param name="kekName">id of the KEK</param>
-    /// <returns>A public key in pem format</returns>
-    public Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekName);
-
-    /// <summary>
     /// Asynchronously delete a key encryption key
     /// </summary>
     /// <param name="keyId">id of the KEK</param>

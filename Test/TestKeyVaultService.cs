@@ -67,23 +67,6 @@ public class TestKeyVaultService
     }
 
     [Test]
-    public async Task ShouldBePossibleToGetPublicKeyOfKekAsPem()
-    {
-        // Given a Key Encryption Key
-        var kekName = $"KEK-{Guid.NewGuid()}";
-        var kekSignedResponse = await _keyVaultService.GenerateKekAsync(kekName);
-        var kek = kekSignedResponse.Kek;
-        
-        // When I ask to get the public key as PEM
-        var gotPem = await _keyVaultService.DownloadPublicKekAsPemAsync(kekName);
-        
-        // Then the PEM should be the same as the one we generated
-        var wantPem = kek.Key.ToRSA().ExportRSAPublicKeyPem();
-        Assert.That(gotPem.PemString, Is.EqualTo(wantPem));
-        
-    }
-
-    [Test]
     public async Task ShouldBeAbleToDeleteAKek()
     {
         // Given a Key Encryption Key 
