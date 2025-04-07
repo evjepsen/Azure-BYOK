@@ -50,22 +50,32 @@ public class CertificateService : ICertificateService
     }
     public async Task<SignResult> SignAsync(byte[] dataToSign)
     {
-        var credential = new DefaultAzureCredential();
-        // Get the certificate
-        var certWithPolicy = await _client.GetCertificateAsync(_applicationOptions.SigningCertificateName);
-        var certId = certWithPolicy.Value.KeyId;
+        try
+        {
+            // Get the certificate
+            var certWithPolicy = await _client.GetCertificateAsync(_applicationOptions.SigningCertificateName);
+            var certId = certWithPolicy.Value.KeyId;
 
-        // Create a CryptographyClient using the ID of the certificate
-        var cryptoClient = new CryptographyClient(certId, credential);
-        
-        // Prepare data for signing, should be pre-hashed
-        var hash = DigestData(dataToSign);
-        
-        // Sign the data using the CryptographyClient
-        var signResult =
-            await cryptoClient.SignAsync(SignatureAlgorithm.RS256, hash);
+            // Create a CryptographyClient using the ID of the certificate
+            var cryptoClient = new CryptographyClient(certId, _tokenCredential);
+            
+            // Prepare data for signing, should be pre-hashed
+            var hash = DigestData(dataToSign);
+            
+            // Sign the data using the CryptographyClient
+            var signResult = await cryptoClient.SignAsync(SignatureAlgorithm.RS256, hash);
+            _logger.LogInformation("Key vault signed {length} bytes", dataToSign.Length);
+            
+            return signResult;
 
-        return signResult;
+        }
+        catch (Exception e)
+        {
+            // Catch in order to log the error
+            _logger.LogError("Could not sign data. Failed with error: {error}", e.Message);
+            // Rethrow the exception to propagate exception to controller
+            throw;
+        }
     }
 
     public async Task<VerifyResult> VerifyAsync(byte[] dataToVerify, byte[] signature)
@@ -75,7 +85,7 @@ public class CertificateService : ICertificateService
         var certId = certWithPolicy.Value.KeyId;
 
         // Create a CryptographyClient using the ID of the certificate
-        var cryptoClient = new CryptographyClient(certId, new DefaultAzureCredential());
+        var cryptoClient = new CryptographyClient(certId, _tokenCredential);
         
         // Prepare data for signing, should be pre-hashed
         var digestToVerify = DigestData(dataToVerify);
