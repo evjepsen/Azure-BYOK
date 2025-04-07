@@ -20,5 +20,8 @@ public class ApplicationOptions
 
     [Required(ErrorMessage = "Allowed emails is required")]
     [MinLength(1)]
-    public List<string> AllowedEmails { get; set; } = new(); 
+    public List<string> AllowedEmails { get; set; } = new();
+
+    [Required(ErrorMessage = "Signing Certificate Name is required")]
+    public string SigningCertificateName { get; set; } = string.Empty;
 }

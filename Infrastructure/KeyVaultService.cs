@@ -19,6 +19,7 @@ public class KeyVaultService : IKeyVaultService
 {
     private readonly KeyClient _client;
     private readonly ITokenService _tokenService;
+    private readonly ICertificateService _certificateService;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly TokenCredential _tokenCredential;
     private readonly string[] _scopes;
@@ -34,6 +35,7 @@ public class KeyVaultService : IKeyVaultService
         _logger = loggerFactory.CreateLogger<KeyVaultService>();
         _httpClientFactory = httpClientFactory;
         _tokenService = tokenService;
+        _certificateService = new CertificateService(httpClientFactory, applicationOptions, loggerFactory);
         _applicationOptions = applicationOptions.Value;
         // Credentials for authentication
         _tokenCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions());
@@ -100,7 +102,7 @@ public class KeyVaultService : IKeyVaultService
     }
 
     // Use RSA-HSM as Key Encryption Key
-    public async Task<KeyVaultKey> GenerateKekAsync(string name)
+    public async Task<KekSignedResponse> GenerateKekAsync(string name)
     {
         var keyOptions = new CreateRsaKeyOptions(name, true)
         {
@@ -112,15 +114,35 @@ public class KeyVaultService : IKeyVaultService
         };
 
         _logger.LogInformation("Creating RSA key encryption key");
-        var kek = await _client.CreateRsaKeyAsync(keyOptions);
+        var kekResponse = await _client.CreateRsaKeyAsync(keyOptions);
 
-        if (!kek.HasValue)
+        if (!kekResponse.HasValue)
         {
             _logger.LogError("Failed to create key encryption key");
             throw new HttpRequestException("Failed to create key encryption key");
         }
 
-        return kek.Value;
+        var kek = kekResponse.Value;
+        
+        // Get the PEM string
+        var pemString = kek.Key.ToRSA().ExportRSAPublicKeyPem();
+        // var pemBytes = Encoding.UTF8.GetBytes(pemString);
+        var kekMarshaled = TokenHelper.SerializeJsonObject(kek);
+        // var kekBytes = Encoding.UTF8.GetBytes(kekMarshaled);
+        // concatenate kek and pem
+        var kekAndPem = Encoding.UTF8.GetBytes(kekMarshaled + pemString);
+        Console.WriteLine($"Concatenated: {kekMarshaled + pemString}");
+
+        var signature = await _certificateService.SignKeyWithCertificateAsync(kekAndPem);
+
+        var kekSignedResponse = new KekSignedResponse()
+        {
+            Kek = kek,
+            PemString = pemString,
+            Base64EncodedSignature = Convert.ToBase64String(signature.Signature),
+        };
+        
+        return kekSignedResponse;
     }
     
     public async Task<PublicKeyKekPem> DownloadPublicKekAsPemAsync(string kekName)

@@ -2,6 +2,7 @@ using Azure.Security.KeyVault.Keys;
 using FakeHSM;
 using Infrastructure;
 using Infrastructure.Interfaces;
+using Infrastructure.Models;
 using Infrastructure.TransferBlobStrategies;
 using Microsoft.Extensions.Logging.Abstractions;
 using Test.TestHelpers;
@@ -34,7 +35,8 @@ public class TestKeyVaultService
         // Given a key vault service
         // When I ask to create a key encryption key
         var kekName = $"KEK-{Guid.NewGuid()}";
-        var kek = await _keyVaultService.GenerateKekAsync(kekName);
+        var kekSignedResponse = await _keyVaultService.GenerateKekAsync(kekName);
+        var kek = kekSignedResponse.Kek;
         // Then it should be created and have the correct attributes
         Assert.That(kek.KeyOperations, Has.Count.EqualTo(1));
         Assert.That(kek.KeyOperations, Does.Contain(KeyOperation.Import));
@@ -49,7 +51,9 @@ public class TestKeyVaultService
     {
         // Given a Key Encryption Key and encrypted key
         var kekName = $"KEK-{Guid.NewGuid()}";
-        var kek = await _keyVaultService.GenerateKekAsync(kekName);
+        var kekSignedResponse = await _keyVaultService.GenerateKekAsync(kekName);
+        var kek = kekSignedResponse.Kek;
+        
         var hsm = new FakeHsm(_tokenService);
         var encryptedKey = hsm.EncryptPrivateKeyForUpload(kek.Key.ToRSA());
         
@@ -67,11 +71,12 @@ public class TestKeyVaultService
     public async Task ShouldBePossibleToGetPublicKeyOfKekAsPem()
     {
         // Given a Key Encryption Key
-        var kekId = $"KEK-{Guid.NewGuid()}";
-        var kek = await _keyVaultService.GenerateKekAsync(kekId);
+        var kekName = $"KEK-{Guid.NewGuid()}";
+        var kekSignedResponse = await _keyVaultService.GenerateKekAsync(kekName);
+        var kek = kekSignedResponse.Kek;
         
         // When I ask to get the public key as PEM
-        var gotPem = await _keyVaultService.DownloadPublicKekAsPemAsync(kekId);
+        var gotPem = await _keyVaultService.DownloadPublicKekAsPemAsync(kekName);
         
         // Then the PEM should be the same as the one we generated
         var wantPem = kek.Key.ToRSA().ExportRSAPublicKeyPem();
@@ -84,7 +89,8 @@ public class TestKeyVaultService
     {
         // Given a Key Encryption Key 
         var kekName = $"Random-delete-{Guid.NewGuid()}";
-        var kek = await _keyVaultService.GenerateKekAsync(kekName);
+        var kekSignedResponse = await _keyVaultService.GenerateKekAsync(kekName);
+        var kek = kekSignedResponse.Kek;
         
         // When I ask to delete it
         var delOp = await _keyVaultService.DeleteKeyAsync(kekName);
@@ -139,7 +145,8 @@ public class TestKeyVaultService
     {
         // Given a Key Encryption Key and transfer blob
         var kekName = $"KEK-{Guid.NewGuid()}";
-        var kek = await _keyVaultService.GenerateKekAsync(kekName);
+        var kekSignedResponse = await _keyVaultService.GenerateKekAsync(kekName);
+        var kek = kekSignedResponse.Kek;
         var hsm = new FakeHsm(_tokenService);
         var transferBlob = hsm.GenerateBlobForUpload(kek.Key.ToRSA(), kek.Id.ToString());
         
