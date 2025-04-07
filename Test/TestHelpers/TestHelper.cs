@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using Infrastructure.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
@@ -28,5 +30,12 @@ public static class TestHelper
         var applicationOptions = new ApplicationOptions();
         configuration.GetSection(ApplicationOptions.Application).Bind(applicationOptions);
         return Options.Create(applicationOptions);
+    }
+    
+    public static X509Certificate2 CreateCertificate()
+    {
+        var ecdsa = ECDsa.Create(); // generate asymmetric key pair
+        var req = new CertificateRequest("cn=foobar", ecdsa, HashAlgorithmName.SHA256);
+        return req.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(1));
     }
 }

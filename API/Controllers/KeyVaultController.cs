@@ -21,6 +21,7 @@ public class KeyVaultController : Controller
     private readonly IKeyVaultManagementService _keyVaultManagementService;
     private readonly ITokenService _tokenService;
     private readonly ILogger<KeyVaultController> _logger;
+    private readonly ISignatureService _signatureService;
 
     /// <summary>
     /// The constructor for the controller
@@ -30,18 +31,22 @@ public class KeyVaultController : Controller
     /// <param name="keyVaultManagementService">The key vault management service used to interact with key vault settings</param>
     /// <param name="tokenService">The token service used when importing keys</param>
     /// <param name="loggerFactory">The keylogger factory for the key vault controller</param>
+    /// <param name="signatureService">The signature service used to check signature validity</param>
     public KeyVaultController(IKeyVaultService keyVaultService, 
         IAlertService alertService, 
         IKeyVaultManagementService keyVaultManagementService, 
         ITokenService tokenService,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory, 
+        ISignatureService signatureService)
 
     {
         _logger = loggerFactory.CreateLogger<KeyVaultController>();
         _keyVaultManagementService = keyVaultManagementService;
         _tokenService = tokenService;
+        _signatureService = signatureService;
         _keyVaultService = keyVaultService;
         _alertService = alertService;
+        _signatureService = signatureService;
     }
     
     /// <summary>
@@ -88,7 +93,6 @@ public class KeyVaultController : Controller
             _logger.LogWarning("The upload request could not be completed - the request body is invalid");
             return BadRequest("The request body is invalid (Properly JSON formatting error)");
         }
-        
         
         var actionResult = await CheckValidityOfImportRequestAsync(request);
 

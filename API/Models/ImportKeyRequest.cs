@@ -21,6 +21,10 @@ public abstract class ImportKeyRequest
     /// The valid key operations
     /// </summary>
     public required string[] KeyOperations { get; init; }
+    
+    public required DateTime CreatedDate { get; init; }
+    
+    public required string SignatureBase64 { get; init; }
  }
 
 /// <summary>
