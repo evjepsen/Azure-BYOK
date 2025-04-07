@@ -53,14 +53,14 @@ public class KeyVaultService : IKeyVaultService
     }
 
 
-    public async Task<KeyVaultUploadKeyResponse> UploadKey(string name, ITransferBlobStrategy transferBlobStrategy)
+    public async Task<KeyVaultUploadKeyResponse> UploadKey(string name, ITransferBlobStrategy transferBlobStrategy, string[] keyOperations)
     {
         var httpClient = _httpClientFactory.CreateClient("WaitAndRetry");
         
         var transferBlob = transferBlobStrategy.GenerateTransferBlob();
         
         // (Manually) Set up the JsonWebKey
-        var requestBody = _tokenService.CreateBodyForRequest(transferBlob);
+        var requestBody = _tokenService.CreateBodyForRequest(transferBlob, keyOperations);
         var requestBodyAsJson = TokenHelper.SerializeJsonObject(requestBody);
         
         var url = $"{_applicationOptions.VaultUri}/keys/{name}/import?api-version=7.4";
@@ -199,5 +199,39 @@ public class KeyVaultService : IKeyVaultService
         }
         
         return doesKeyExist;
+    }
+
+    public KeyOperationsValidationResult ValidateKeyOperations(string[] keyOperations)
+    {
+        // Check that the key operations are valid
+        var validKeyOperations = new List<string>
+        {
+            "encrypt",
+            "decrypt",
+            "sign",
+            "verify",
+            "wrapKey",
+            "unwrapKey"
+        };
+
+        var invalidOperations = keyOperations
+            .Where(operation => !validKeyOperations.Contains(operation))
+            .ToList();
+
+        if (invalidOperations.Count != 0)
+        {
+            _logger.LogWarning("Invalid key operations detected in request: {InvalidActions}", string.Join(", ", invalidOperations));
+            return new KeyOperationsValidationResult
+            {
+                IsValid = false,
+                ErrorMessage = $"Invalid key operations detected: {string.Join(", ", invalidOperations)}"
+            };
+        }
+        
+        return new KeyOperationsValidationResult
+        {
+            IsValid = true,
+            ErrorMessage = string.Empty,
+        };
     }
 }

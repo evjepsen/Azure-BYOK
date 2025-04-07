@@ -57,7 +57,7 @@ public class TestKeyVaultService
         var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
         var transferBlobStrategy = new EncryptedKeyTransferBlobStrategy(kek.Id.ToString(), encryptedKey, _tokenService);
 
-        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy);
+        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy, ["encrypt", "decrypt"]);
         
         // Then it should be successful
         Assert.That(kvRes.Attributes.Enabled, Is.True);
@@ -147,7 +147,7 @@ public class TestKeyVaultService
         var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
         var transferBlobStrategy = new SpecifiedTransferBlobStrategy(transferBlob);
         
-        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy);
+        var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy, ["encrypt", "decrypt", "sign", "verify", "wrapKey", "unwrapKey"]);
         
         // Then it should be successful
         Assert.That(kvRes.Attributes.Enabled, Is.True);
@@ -178,4 +178,27 @@ public class TestKeyVaultService
         // Then it should
         Assert.That(keyExists, Is.False);
     }
+
+    [Test]
+    public void ShouldAllowedOperationsBeValid()
+    {
+        // Given a list of key operations
+        string[] operations = ["encrypt", "decrypt", "sign", "verify", "wrapKey", "unwrapKey"];
+        // When I ask whether they are valid
+        var result = _keyVaultService.ValidateKeyOperations(operations);
+        // Then they should be valid
+        Assert.That(result.IsValid, Is.True);
+    } 
+    
+    [Test]
+    public void ShouldNotAllowedOperationsBeInvalid()
+    {
+        // Given a list of key operations
+        string[] operations = ["encrypt", "decrypt", "sign", "abc"];
+        // When I ask whether they are valid
+        var result = _keyVaultService.ValidateKeyOperations(operations);
+        // Then they should be valid
+        Assert.That(result.IsValid, Is.False);
+        Assert.That(result.ErrorMessage, Is.EqualTo("Invalid key operations detected: abc"));
+    } 
 }

@@ -11,6 +11,11 @@ public abstract class RotateKeyRequest
     /// The name of the key
     /// </summary>
     public required string KeyName { get; init; }
+    
+    /// <summary>
+    /// The valid key operations
+    /// </summary>
+    public required string[] KeyOperations { get; init; }
 }
 
 /// <summary>

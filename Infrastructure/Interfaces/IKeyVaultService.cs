@@ -14,8 +14,9 @@ public interface IKeyVaultService
     /// </summary>
     /// <param name="name">Name of the TDE protector</param>
     /// <param name="transferBlobStrategy">The strategy used to create the transfer blob</param>
+    /// <param name="keyOperations">The operations allowed on the new key</param>
     /// <returns>The public information of the Azure Key Vault key that has been uploaded</returns>
-    public Task<KeyVaultUploadKeyResponse> UploadKey(string name, ITransferBlobStrategy transferBlobStrategy);
+    public Task<KeyVaultUploadKeyResponse> UploadKey(string name, ITransferBlobStrategy transferBlobStrategy, string[] keyOperations);
 
     /// <summary>
     /// Generate a Key Encryption Key (KEK) to protect the customer's TDE protector
@@ -58,4 +59,11 @@ public interface IKeyVaultService
     /// <param name="keyName">The name of the key to check</param>
     /// <returns>True when the key exists and false otherwise</returns>
     public Task<bool> CheckIfKeyExistsAsync(string keyName);
+    
+    /// <summary>
+    /// Checks whether the key operations are valid
+    /// </summary>
+    /// <param name="keyOperations">The key operations to validate</param>
+    /// <returns>An object containing the result and invalid key operations (if any)</returns>
+    public KeyOperationsValidationResult ValidateKeyOperations(string[] keyOperations);
 }
