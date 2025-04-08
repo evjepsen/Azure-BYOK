@@ -1,7 +1,6 @@
 using Infrastructure.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using Sprache;
 
 namespace Test.TestHelpers;
 

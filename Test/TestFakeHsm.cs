@@ -8,7 +8,7 @@ namespace Test;
 
 [TestFixture]
 [TestOf(typeof(FakeHsm))]
-public class FakeHsmTest
+public class TestFakeHsm
 {
     private IFakeHsm _fakeHsm;
     private TokenService _tokenService;
@@ -31,7 +31,8 @@ public class FakeHsmTest
             new NullLoggerFactory());
         
         var kekName = $"KEK-{Guid.NewGuid()}";
-        var kek = await keyVaultService.GenerateKekAsync(kekName);
+        var kekSignedResponse = await keyVaultService.GenerateKekAsync(kekName);
+        var kek = kekSignedResponse.Kek;
         // Given a key vault service and Key Encryption Key 
         
         // When I ask to generate a blob

@@ -1,6 +1,5 @@
 ﻿using System.Security.Cryptography;
 using FakeHSM.Interfaces;
-using Infrastructure.Helpers;
 using Infrastructure.Interfaces;
 using Infrastructure.Models;
 using Org.BouncyCastle.Crypto;
