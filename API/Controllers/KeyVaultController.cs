@@ -96,7 +96,7 @@ public class KeyVaultController : Controller
 
         // Check that the signature is valid
         var keyData = Convert.FromBase64String(request.EncryptedKeyBase64);
-        var data = _signatureService.GetSignedData(keyData, request.CreatedTimeStamp);
+        var data = _signatureService.GetSignedData(keyData, request.TimeStamp);
         bool isSignatureValid;
         try
         {
@@ -114,7 +114,7 @@ public class KeyVaultController : Controller
             return BadRequest("The signature is invalid");
         }
         
-        if (DateTime.UtcNow.AddMinutes(10) < request.CreatedTimeStamp || request.CreatedTimeStamp < DateTime.UtcNow.AddMinutes(-10))
+        if (DateTime.UtcNow.AddMinutes(10) < request.TimeStamp || request.TimeStamp < DateTime.UtcNow.AddMinutes(-10))
         {
             _logger.LogWarning("The upload request is not longer valid");
             return BadRequest("The upload request is not longer valid");

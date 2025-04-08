@@ -33,7 +33,12 @@ public class CertificateCacheTest
     public void ShouldBePossibleToAddACertificate()
     {
         // Given a certificate cache and a certificate
-        var certificate = TestHelper.CreateCertificate(RSA.Create());
+        var certificate = TestHelper.CreateCertificate(
+            RSA.Create(), 
+            "cn=Customer HSM",
+            DateTimeOffset.Now,
+            DateTimeOffset.Now.AddYears(1)
+        );
         // When I ask to add it
         _certificateCache.AddCertificate(certificate);
         // Then it should be added
@@ -43,16 +48,74 @@ public class CertificateCacheTest
     }
     
     [Test]
-    public void SelfSignedCertificateShouldBeValid()
+    public void ShouldSelfSignedCertificateShouldBeValid()
     {
         // Given a certificate cache and a self-signed certificate
-        var key = RSA.Create();
-        var certificate = TestHelper.CreateCertificate(key);
+        var certificate = TestHelper.CreateCertificate(
+            RSA.Create(), 
+            "cn=Customer HSM",
+            DateTimeOffset.Now,
+            DateTimeOffset.Now.AddYears(1)
+        );
         
         // When I to validate it
         var isValid = _certificateCache.ValidateCertificate(certificate);
         
         // Then it should be valid
         Assert.That(isValid, Is.True);
+    }
+    
+    [Test]
+    public void ShouldSelfSignedCertificateThatHasTheWrongSubjectNotBeValid()
+    {
+        // Given a certificate cache and a self-signed certificate
+        var certificate = TestHelper.CreateCertificate(
+            RSA.Create(), 
+            "cn=BYOK",
+            DateTimeOffset.Now,
+            DateTimeOffset.Now.AddYears(1)
+        );
+        
+        // When I to validate it
+        var isValid = _certificateCache.ValidateCertificate(certificate);
+        
+        // Then it should be valid
+        Assert.That(isValid, Is.False);
+    }
+    
+    [Test]
+    public void ShouldSelfSignedCertificateThatIsNotLongerValidNotBeValid()
+    {
+        // Given a certificate cache and a self-signed certificate
+        var certificate = TestHelper.CreateCertificate(
+            RSA.Create(), 
+            "cn=Customer HSM",
+            DateTimeOffset.Now.AddYears(-2),
+            DateTimeOffset.Now.AddYears(-1)
+        );
+        
+        // When I to validate it
+        var isValid = _certificateCache.ValidateCertificate(certificate);
+        
+        // Then it should be valid
+        Assert.That(isValid, Is.False);
+    }
+    
+    [Test]
+    public void ShouldSelfSignedCertificateThatIsNotValidYetNotBeValid()
+    {
+        // Given a certificate cache and a self-signed certificate
+        var certificate = TestHelper.CreateCertificate(
+            RSA.Create(), 
+            "cn=Customer HSM",
+            DateTimeOffset.Now.AddYears(1),
+            DateTimeOffset.Now.AddYears(2)
+        );
+        
+        // When I to validate it
+        var isValid = _certificateCache.ValidateCertificate(certificate);
+        
+        // Then it should be valid
+        Assert.That(isValid, Is.False);
     }
 }

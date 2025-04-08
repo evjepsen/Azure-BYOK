@@ -55,8 +55,8 @@ public class CertificateCache : ICertificateCache
         }
         
         // Check that the issuer is the specified issuer
-        var issuer = certificate.Issuer;
-        if (!issuer.Equals(_applicationOption.ValidIssuer, StringComparison.OrdinalIgnoreCase))
+        var subject = certificate.Subject;
+        if (!subject.Equals(_applicationOption.ValidSubject, StringComparison.OrdinalIgnoreCase))
         {
             _logger.LogInformation("The certificate was not issued by a valid issuer");
             return false;
@@ -69,8 +69,9 @@ public class CertificateCache : ICertificateCache
         var isValid = chain.Build(certificate);
         if (!isValid)
         {
-            return chain.ChainStatus
+            var isProblematicStatus = chain.ChainStatus
                 .Any(status => status.Status != X509ChainStatusFlags.UntrustedRoot);
+            return !isProblematicStatus;
         }
         
         return true;

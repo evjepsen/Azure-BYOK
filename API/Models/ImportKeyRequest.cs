@@ -22,8 +22,14 @@ public abstract class ImportKeyRequest
     /// </summary>
     public required string[] KeyOperations { get; init; }
     
-    public required DateTime CreatedTimeStamp { get; init; }
+    /// <summary>
+    /// The timestamp of sending the request
+    /// </summary>
+    public required DateTime TimeStamp { get; init; }
     
+    /// <summary>
+    /// The signature in base64 format
+    /// </summary>
     public required string SignatureBase64 { get; init; }
  }
 

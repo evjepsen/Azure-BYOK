@@ -13,12 +13,6 @@ public class SignatureServiceTest
     private ISignatureService _signatureService;
     private ICertificateCache _certificateCache;
 
-    public SignatureServiceTest(ISignatureService signatureService, ICertificateCache certificateCache)
-    {
-        _signatureService = signatureService;
-        _certificateCache = certificateCache;
-    }
-
     [SetUp]
     public void Setup()
     {
@@ -47,7 +41,12 @@ public class SignatureServiceTest
     {
         // Given a signature service and a certificate stored in the cache (Which has been used to sign a message)
         var key = RSA.Create();
-        var certificate = TestHelper.CreateCertificate(key);
+        var certificate = TestHelper.CreateCertificate(
+            key, 
+            "cn=Customer HSM",
+            DateTimeOffset.Now,
+            DateTimeOffset.Now.AddYears(1)
+        );
         _certificateCache.AddCertificate(certificate);
         
         // When I ask to verify the signature

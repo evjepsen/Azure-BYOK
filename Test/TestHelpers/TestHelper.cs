@@ -31,10 +31,10 @@ public static class TestHelper
         return Options.Create(applicationOptions);
     }
     
-    public static X509Certificate2 CreateCertificate(RSA rsa)
+    public static X509Certificate2 CreateCertificate(RSA rsa, string subjectName, DateTimeOffset notBefore, DateTimeOffset notAfter)
     {
-        var req = new CertificateRequest("cn=Customer HSM", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        var cert = req.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(1));
+        var req = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var cert = req.CreateSelfSigned(notBefore, notAfter);
         var certData = cert.Export(X509ContentType.Cert);
         return new X509Certificate2(certData);
     }
