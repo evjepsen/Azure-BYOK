@@ -7,8 +7,8 @@ using Test.TestHelpers;
 namespace Test;
 
 [TestFixture]
-[TestOf(typeof(SignatureService))]
-public class SignatureServiceTest
+[TestOf(typeof(Infrastructure.TestSignatureService))]
+public class TestSignatureService
 {
     private ISignatureService _signatureService;
     private ICertificateCache _certificateCache;
@@ -20,8 +20,8 @@ public class SignatureServiceTest
         var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
         
         // Initialize the certificate cache and signature service
-        _certificateCache = new CertificateCache(new NullLoggerFactory(), applicationOptions);
-        _signatureService = new SignatureService(_certificateCache, new NullLoggerFactory());
+        _certificateCache = new Infrastructure.TestCertificateCache(new NullLoggerFactory(), applicationOptions);
+        _signatureService = new Infrastructure.TestSignatureService(_certificateCache, new NullLoggerFactory());
     }
     
     [Test]

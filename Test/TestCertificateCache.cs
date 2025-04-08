@@ -6,17 +6,17 @@ using Test.TestHelpers;
 namespace Test;
 
 [TestFixture]
-[TestOf(typeof(CertificateCache))]
-public class CertificateCacheTest
+[TestOf(typeof(Infrastructure.TestCertificateCache))]
+public class TestCertificateCache
 {
-    private CertificateCache _certificateCache;
+    private Infrastructure.TestCertificateCache _testCertificateCache;
 
     [SetUp]
     public void Setup()
     {
         var configuration = TestHelper.CreateTestConfiguration();
         var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
-        _certificateCache = new CertificateCache(new NullLoggerFactory(), applicationOptions);
+        _testCertificateCache = new Infrastructure.TestCertificateCache(new NullLoggerFactory(), applicationOptions);
     }
     
     [Test]
@@ -24,7 +24,7 @@ public class CertificateCacheTest
     {
         // Given a certificate cache 
         // When I ask to get the certificate
-        var certificate = _certificateCache.GetCertificate();
+        var certificate = _testCertificateCache.GetCertificate();
         // Then it should throw an exception
         Assert.That(certificate, Is.Null);
     }
@@ -40,9 +40,9 @@ public class CertificateCacheTest
             DateTimeOffset.Now.AddYears(1)
         );
         // When I ask to add it
-        _certificateCache.AddCertificate(certificate);
+        _testCertificateCache.AddCertificate(certificate);
         // Then it should be added
-        var retrievedCertificate = _certificateCache.GetCertificate();
+        var retrievedCertificate = _testCertificateCache.GetCertificate();
         // And the retrieved certificate should be the same as the original
         Assert.That(retrievedCertificate, Is.EqualTo(certificate));
     }
@@ -59,7 +59,7 @@ public class CertificateCacheTest
         );
         
         // When I to validate it
-        var isValid = _certificateCache.ValidateCertificate(certificate);
+        var isValid = _testCertificateCache.ValidateCertificate(certificate);
         
         // Then it should be valid
         Assert.That(isValid, Is.True);
@@ -77,7 +77,7 @@ public class CertificateCacheTest
         );
         
         // When I to validate it
-        var isValid = _certificateCache.ValidateCertificate(certificate);
+        var isValid = _testCertificateCache.ValidateCertificate(certificate);
         
         // Then it should be valid
         Assert.That(isValid, Is.False);
@@ -95,7 +95,7 @@ public class CertificateCacheTest
         );
         
         // When I to validate it
-        var isValid = _certificateCache.ValidateCertificate(certificate);
+        var isValid = _testCertificateCache.ValidateCertificate(certificate);
         
         // Then it should be valid
         Assert.That(isValid, Is.False);
@@ -113,7 +113,7 @@ public class CertificateCacheTest
         );
         
         // When I to validate it
-        var isValid = _certificateCache.ValidateCertificate(certificate);
+        var isValid = _testCertificateCache.ValidateCertificate(certificate);
         
         // Then it should be valid
         Assert.That(isValid, Is.False);

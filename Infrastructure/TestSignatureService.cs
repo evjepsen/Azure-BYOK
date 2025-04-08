@@ -6,14 +6,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure;
 
-public class SignatureService : ISignatureService
+public class TestSignatureService : ISignatureService
 {
     private readonly ICertificateCache _certificateCache;
-    private readonly ILogger<SignatureService> _logger;
+    private readonly ILogger<TestSignatureService> _logger;
 
-    public SignatureService(ICertificateCache certificateCache, ILoggerFactory loggerFactory)
+    public TestSignatureService(ICertificateCache certificateCache, ILoggerFactory loggerFactory)
     {
-        _logger = loggerFactory.CreateLogger<SignatureService>();
+        _logger = loggerFactory.CreateLogger<TestSignatureService>();
         _certificateCache = certificateCache;
     }
 

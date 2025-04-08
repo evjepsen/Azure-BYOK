@@ -133,7 +133,7 @@ public class KeyVaultService : IKeyVaultService
 
         var singResult = await _certificateService.SignAsync(kekAndPem);
 
-        var kekSignedResponse = new KekSignedResponse()
+        var kekSignedResponse = new KekSignedResponse
         {
             Kek = kek,
             PemString = pemString,

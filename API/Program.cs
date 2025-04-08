@@ -65,8 +65,8 @@ builder.Services.AddScoped<IKeyVaultService, KeyVaultService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddScoped<IKeyVaultManagementService, KeyVaultManagementService>();
-builder.Services.AddScoped<ISignatureService, SignatureService>();
-builder.Services.AddSingleton<ICertificateCache, CertificateCache>();
+builder.Services.AddScoped<ISignatureService, TestSignatureService>();
+builder.Services.AddSingleton<ICertificateCache, TestCertificateCache>();
 
 // Polly http client factory
 builder.Services.AddHttpClient("WaitAndRetry")

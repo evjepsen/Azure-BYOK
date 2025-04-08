@@ -6,16 +6,16 @@ using Microsoft.Extensions.Options;
 
 namespace Infrastructure;
 
-public class CertificateCache : ICertificateCache
+public class TestCertificateCache : ICertificateCache
 {
     private X509Certificate2? _certificate;
-    private readonly ILogger<CertificateCache> _logger;
+    private readonly ILogger<TestCertificateCache> _logger;
     private readonly ApplicationOptions _applicationOption;
 
-    public CertificateCache(ILoggerFactory loggerFactory, IOptions<ApplicationOptions> applicationOption)
+    public TestCertificateCache(ILoggerFactory loggerFactory, IOptions<ApplicationOptions> applicationOption)
     {
         _certificate = null;
-        _logger = loggerFactory.CreateLogger<CertificateCache>();
+        _logger = loggerFactory.CreateLogger<TestCertificateCache>();
         _applicationOption = applicationOption.Value;
     }
 
