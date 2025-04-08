@@ -1,5 +1,7 @@
+using System.Text;
 using API.Models;
 using Azure;
+using Infrastructure.Helpers;
 using Infrastructure.Interfaces;
 using Infrastructure.TransferBlobStrategies;
 using Infrastructure.Models;
@@ -94,34 +96,9 @@ public class KeyVaultController : Controller
             return BadRequest("The request body is invalid (Properly JSON formatting error)");
         }
 
-        // Check that the signature is valid
+        // Check that the request is valid
         var keyData = Convert.FromBase64String(request.EncryptedKeyBase64);
-        var data = _signatureService.GetSignedData(keyData, request.TimeStamp);
-        bool isSignatureValid;
-        try
-        {
-            isSignatureValid = _signatureService.IsSignatureValid(request.SignatureBase64, data);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError("There was an error while checking the signature: {errorMessage}", e.Message);
-            return BadRequest("There was an error while checking the signature");
-        }
-
-        if (!isSignatureValid)
-        {
-            _logger.LogWarning("The signature is invalid");
-            return BadRequest("The signature is invalid");
-        }
-        
-        if (DateTime.UtcNow.AddMinutes(10) < request.TimeStamp || request.TimeStamp < DateTime.UtcNow.AddMinutes(-10))
-        {
-            _logger.LogWarning("The upload request is not longer valid");
-            return BadRequest("The upload request is not longer valid");
-        }
-        
-        var actionResult = await CheckValidityOfImportRequestAsync(request);
-
+        var actionResult = await CheckValidityOfImportRequestAsync(request, keyData);
         if (actionResult is not OkResult)
         {
             return actionResult;
@@ -152,7 +129,10 @@ public class KeyVaultController : Controller
             return BadRequest("The request body is invalid (Properly JSON formatting error)");
         }
         
-        var actionResult = await CheckValidityOfImportRequestAsync(request);
+        // Check that the request is valid
+        var jsonKeyTransferBlob = TokenHelper.SerializeJsonObject(request.KeyTransferBlob);
+        var keyData = Encoding.UTF8.GetBytes(jsonKeyTransferBlob);
+        var actionResult = await CheckValidityOfImportRequestAsync(request, keyData);
 
         if (actionResult is not OkResult)
         {
@@ -348,7 +328,7 @@ public class KeyVaultController : Controller
     }
 
     // Helper method to check that import request (both blob and encrypted) are valid
-    private async Task<IActionResult> CheckValidityOfImportRequestAsync(ImportKeyRequest request)
+    private async Task<IActionResult> CheckValidityOfImportRequestAsync(ImportKeyRequest request, byte[] keyData)
     {
         // There must be an alert for key vault usage setup
         var isThereAKeyVaultAlert = await _alertService.CheckForKeyVaultAlertAsync();
@@ -381,8 +361,8 @@ public class KeyVaultController : Controller
         {
             return BadRequest(keyOperationsValidationResult.ErrorMessage);
         }
-
-        return Ok();
+        
+        return CheckSignature(request, keyData);
     }
     
     // Helper method to check if the action group exists
@@ -505,5 +485,35 @@ public class KeyVaultController : Controller
             _logger.LogError("An unexpected error occurred while rotating the key {keyName}", request.KeyName);
             return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
         }
+    }
+    
+    // Helper method to check the signature
+    private IActionResult CheckSignature(ImportKeyRequest request, byte[] keyData)
+    {
+        var data = _signatureService.GetSignedData(keyData, request.TimeStamp);
+        bool isSignatureValid;
+        try
+        {
+            isSignatureValid = _signatureService.IsSignatureValid(request.SignatureBase64, data);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("There was an error while checking the signature: {errorMessage}", e.Message);
+            return BadRequest("There was an error while checking the signature");
+        }
+
+        if (!isSignatureValid)
+        {
+            _logger.LogWarning("The signature is invalid");
+            return BadRequest("The signature is invalid");
+        }
+        
+        if (request.TimeStamp < DateTime.UtcNow.AddMinutes(-10) || DateTime.UtcNow.AddMinutes(10) < request.TimeStamp)
+        {
+            _logger.LogWarning("The upload request is not longer valid");
+            return BadRequest("The upload request is not longer valid");
+        }
+
+        return Ok();
     }
 }

@@ -33,7 +33,6 @@ public class TestKeyVaultService
         _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory, applicationOptions, new NullLoggerFactory());
         _keyVaultManagementService = new KeyVaultManagementService(applicationOptions, new NullLoggerFactory());
         
-        var certificateCache = new CertificateCache(new NullLoggerFactory(), applicationOptions);
         _hsm = new FakeHsm(_tokenService);
     }
 

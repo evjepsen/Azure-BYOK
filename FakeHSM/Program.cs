@@ -1,8 +1,9 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using FakeHSM.Interfaces;
 using Infrastructure;
 using Infrastructure.Helpers;
-using Infrastructure.Options;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FakeHSM;
@@ -34,11 +35,12 @@ public abstract class Program
         Console.WriteLine("PEM loaded...");
         
         var tokenService = new TokenService(new NullLoggerFactory());
-        var fakeHsm = new FakeHsm(tokenService);
+        IFakeHsm fakeHsm = new FakeHsm(tokenService);
         
         Console.WriteLine("Generate blob? (y/n)");
         var generateBlob = Console.ReadLine();
-
+        
+        byte[] keyData;
         if (generateBlob == "y")
         {
             Console.WriteLine("What is the id of the kek?");
@@ -52,6 +54,8 @@ public abstract class Program
             var blob = fakeHsm.GenerateBlobForUpload(kek, kekId);
             var jsonBlob = TokenHelper.SerializeJsonObject(blob);
             Console.WriteLine($"Blob ready to upload (JSON):\n {jsonBlob}");
+            
+            keyData = Encoding.UTF8.GetBytes(jsonBlob);
         }
         else
         {
@@ -59,15 +63,16 @@ public abstract class Program
             var encryptedKey = fakeHsm.EncryptPrivateKeyForUpload(kek);
         
             Console.WriteLine($"Key ready to upload: {encryptedKey}");
-            
-            Console.WriteLine("Signing the key ");
-            var timeStamp = DateTime.UtcNow;
-            Console.WriteLine($"The timestamp is: {timeStamp:yyyy-MM-ddTHH:mm:ssK}");
-            var signature = fakeHsm.SignData(Convert.FromBase64String(encryptedKey), timeStamp);
-            Console.WriteLine($"Key signature: {signature}");
-            
+            keyData = Convert.FromBase64String(encryptedKey);
         }
+        // Sign the key
+        Console.WriteLine("Signing the key ");
+        var timeStamp = DateTime.UtcNow;
+        Console.WriteLine($"The timestamp is: {timeStamp:yyyy-MM-ddTHH:mm:ssK}");
+        var signature = fakeHsm.SignData(keyData, timeStamp);
+        Console.WriteLine($"Key signature: {signature}");
         
+        // Generate the self-signed certificate and save it to a specified location
         Console.WriteLine("Generating self-signed certificate ...");
         var cert = fakeHsm.GetCertificateForPrivateKey();
         Console.WriteLine("Specify where the cert should be saved");
