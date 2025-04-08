@@ -58,7 +58,7 @@ public class TestCertificateCache : ICertificateCache
         var subject = certificate.Subject;
         if (!subject.Equals(_applicationOption.ValidSubject, StringComparison.OrdinalIgnoreCase))
         {
-            _logger.LogInformation("The certificate was not issued by a valid issuer");
+            _logger.LogInformation("The certificate was not issued to a valid subject");
             return false;
         }
         
@@ -69,6 +69,7 @@ public class TestCertificateCache : ICertificateCache
         var isValid = chain.Build(certificate);
         if (!isValid)
         {
+            _logger.LogInformation("Checking the certificate chain");
             var isProblematicStatus = chain.ChainStatus
                 .Any(status => status.Status != X509ChainStatusFlags.UntrustedRoot);
             return !isProblematicStatus;

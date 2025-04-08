@@ -40,7 +40,6 @@ public class KeyVaultController : Controller
         ITokenService tokenService,
         ILoggerFactory loggerFactory, 
         ISignatureService signatureService)
-
     {
         _logger = loggerFactory.CreateLogger<KeyVaultController>();
         _keyVaultManagementService = keyVaultManagementService;
@@ -58,7 +57,7 @@ public class KeyVaultController : Controller
     /// <param name="kekName">Name of the key encryption key</param>
     /// <returns>The public part of the key encryption key (To be used to encrypt the user chosen key)</returns>
     [HttpGet("create/{kekName}")]
-    public async Task<IActionResult> CreateKeyEncryptionKey(string kekName)
+    public async Task<IActionResult> RequestKeyEncryptionKey(string kekName)
     {
         try
         {
@@ -483,7 +482,7 @@ public class KeyVaultController : Controller
         bool isSignatureValid;
         try
         {
-            isSignatureValid = _signatureService.IsSignatureValid(requestBase.SignatureBase64, data);
+            isSignatureValid = _signatureService.IsCustomerSignatureValid(requestBase.SignatureBase64, data);
         }
         catch (Exception e)
         {

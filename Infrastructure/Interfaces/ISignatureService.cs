@@ -11,7 +11,7 @@ public interface ISignatureService
     /// <param name="signatureBase64">The signature in base64</param>
     /// <param name="data">The signed data</param>
     /// <returns>True if the signature is valid</returns>
-    public bool IsSignatureValid(string signatureBase64, byte[] data);
+    public bool IsCustomerSignatureValid(string signatureBase64, byte[] data);
 
     /// <summary>
     /// Get the signed data using the key data and the timestamp

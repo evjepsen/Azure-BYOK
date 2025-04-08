@@ -30,7 +30,7 @@ public class TestSignatureService
         var data = "Test data"u8.ToArray();
         // Given a signature service 
         // When I ask check whether a signature is valid
-        var exception = Assert.Throws<InvalidOperationException>(() => _signatureService.IsSignatureValid("Test signature", data));
+        var exception = Assert.Throws<InvalidOperationException>(() => _signatureService.IsCustomerSignatureValid("Test signature", data));
 
         // Then it should throw an exception
         Assert.That(exception.Message, Is.EqualTo("No certificate was found."));
@@ -51,7 +51,7 @@ public class TestSignatureService
         
         // When I ask to verify the signature
         var (signature, data) = TestHelper.CreateSignature(key);
-        var isValid = _signatureService.IsSignatureValid(signature, data);
+        var isValid = _signatureService.IsCustomerSignatureValid(signature, data);
         
         // Then it should be successful
         Assert.That(isValid, Is.True);

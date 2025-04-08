@@ -21,9 +21,7 @@ public class CertificateService : ICertificateService
     public CertificateService(
         IHttpClientFactory httpClientFactory, 
         IOptions<ApplicationOptions> applicationOptions,
-        ILoggerFactory loggerFactory
-        
-        )
+        ILoggerFactory loggerFactory)
     {
         _applicationOptions = applicationOptions.Value;
         _logger = loggerFactory.CreateLogger<CertificateService>();
@@ -32,19 +30,13 @@ public class CertificateService : ICertificateService
         _client = new CertificateClient(
             new Uri(_applicationOptions.VaultUri),
             _tokenCredential,
-            new CertificateClientOptions() 
+            new CertificateClientOptions
             {
                 Transport = new HttpClientTransport(httpClientFactory.CreateClient("WaitAndRetry"))
             }
         );
     }
-
-    private static byte[] DigestData(byte[] data)
-    {
-        var digest = SHA256.HashData(data);
-        
-        return digest;
-    }
+    
     public async Task<SignResult> SignAsync(byte[] dataToSign)
     {
         try
@@ -93,4 +85,5 @@ public class CertificateService : ICertificateService
         return verifyResult;
     }
 
+    private static byte[] DigestData(byte[] data) => SHA256.HashData(data);
 }

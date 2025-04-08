@@ -17,7 +17,7 @@ public class TestSignatureService : ISignatureService
         _certificateCache = certificateCache;
     }
 
-    public bool IsSignatureValid(string signatureBase64, byte[] data)
+    public bool IsCustomerSignatureValid(string signatureBase64, byte[] data)
     {
         _logger.LogInformation("Verifying signature...");
         var certificate = _certificateCache.GetCertificate();
