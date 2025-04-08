@@ -19,7 +19,7 @@ public class KeyVaultService : IKeyVaultService
 {
     private readonly KeyClient _client;
     private readonly ITokenService _tokenService;
-    private readonly ICertificateService _certificateService;
+    private readonly ISignatureService _signatureService;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly TokenCredential _tokenCredential;
     private readonly string[] _scopes;
@@ -27,6 +27,7 @@ public class KeyVaultService : IKeyVaultService
     private readonly ILogger<KeyVaultService> _logger;
 
     public KeyVaultService(ITokenService tokenService, 
+        ISignatureService signatureService,
         IHttpClientFactory httpClientFactory, 
         IOptions<ApplicationOptions> applicationOptions,
         ILoggerFactory loggerFactory
@@ -35,7 +36,7 @@ public class KeyVaultService : IKeyVaultService
         _logger = loggerFactory.CreateLogger<KeyVaultService>();
         _httpClientFactory = httpClientFactory;
         _tokenService = tokenService;
-        _certificateService = new CertificateService(httpClientFactory, applicationOptions, loggerFactory);
+        _signatureService = signatureService;
         _applicationOptions = applicationOptions.Value;
         // Credentials for authentication
         _tokenCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions());
@@ -133,7 +134,7 @@ public class KeyVaultService : IKeyVaultService
         // Concatenate kek and pem
         var kekAndPem = Encoding.UTF8.GetBytes(kekMarshaled + pemString);
 
-        var signResult = await _certificateService.SignAsync(kekAndPem);
+        var signResult = await _signatureService.UseAzureToSign(kekAndPem);
 
         var kekSignedResponse = new KekSignedResponse
         {

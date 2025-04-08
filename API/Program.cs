@@ -1,9 +1,11 @@
 using System.Reflection;
 using System.Security.Claims;
 using System.Text;
+using Azure.Security.KeyVault.Keys.Cryptography;
 using Google.Apis.Auth.AspNetCore3;
 using Infrastructure;
 using Infrastructure.Exceptions;
+using Infrastructure.Factories;
 using Infrastructure.Interfaces;
 using Infrastructure.Options;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -65,8 +67,9 @@ builder.Services.AddScoped<IKeyVaultService, KeyVaultService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddScoped<IKeyVaultManagementService, KeyVaultManagementService>();
-builder.Services.AddScoped<ISignatureService, TestSignatureService>();
-builder.Services.AddSingleton<ICertificateCache, TestCertificateCache>();
+builder.Services.AddScoped<ISignatureService, SignatureService>();
+builder.Services.AddSingleton<ICertificateCache, CertificateCache>();
+builder.Services.AddSingleton<ICryptographyClientFactory, CryptographyClientFactory>();
 
 // Polly http client factory
 builder.Services.AddHttpClient("WaitAndRetry")

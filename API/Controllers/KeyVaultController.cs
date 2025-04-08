@@ -478,7 +478,7 @@ public class KeyVaultController : Controller
     // Helper method to check the signature
     private IActionResult CheckSignature(KeyRequestBase requestBase, byte[] keyData)
     {
-        var data = _signatureService.GetSignedData(keyData, requestBase.TimeStamp);
+        var data = _signatureService.GetCustomerUploadSignedData(keyData, requestBase.TimeStamp);
         bool isSignatureValid;
         try
         {

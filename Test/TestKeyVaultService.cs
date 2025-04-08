@@ -2,6 +2,7 @@ using Azure.Security.KeyVault.Keys;
 using FakeHSM;
 using FakeHSM.Interfaces;
 using Infrastructure;
+using Infrastructure.Factories;
 using Infrastructure.Interfaces;
 using Infrastructure.TransferBlobStrategies;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -24,13 +25,24 @@ public class TestKeyVaultService
     {
         TestHelper.CreateTestConfiguration();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
+        ICryptographyClientFactory cryptographyClientFactory = new CryptographyClientFactory(httpClientFactory);
         
         var configuration = TestHelper.CreateTestConfiguration();
         _tokenService = new TokenService(new NullLoggerFactory());
         
         var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
         
-        _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory, applicationOptions, new NullLoggerFactory());
+        var certificateCache = new CertificateCache(new NullLoggerFactory(), applicationOptions);
+        var signatureService = new SignatureService(certificateCache,
+            httpClientFactory,
+            applicationOptions,
+            cryptographyClientFactory,
+            new NullLoggerFactory());        
+        _keyVaultService = new KeyVaultService(_tokenService, 
+            signatureService, 
+            httpClientFactory, 
+            applicationOptions, 
+            new NullLoggerFactory());
         _keyVaultManagementService = new KeyVaultManagementService(applicationOptions, new NullLoggerFactory());
         
         _hsm = new FakeHsm(_tokenService);
