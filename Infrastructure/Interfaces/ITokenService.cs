@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Infrastructure.Models;
 
 namespace Infrastructure.Interfaces;

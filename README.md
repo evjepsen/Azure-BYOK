@@ -34,7 +34,8 @@ Example ´appsettings.azure.json´ file:
     "AllowedEmails": [
       "john.doe@gmail.com",
       "kahn@example.com"
-    ]
+    ],
+    "SigningCertificateName": "BYOK-Signing-Certificate"
   }
 }
 ```

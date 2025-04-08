@@ -5,7 +5,6 @@ using Azure.ResourceManager.KeyVault;
 using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
 using Infrastructure.Options;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 

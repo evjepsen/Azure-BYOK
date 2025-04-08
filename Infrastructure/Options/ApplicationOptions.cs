@@ -22,6 +22,9 @@ public class ApplicationOptions
     [MinLength(1)]
     public List<string> AllowedEmails { get; set; } = new(); 
     
-    [Required(ErrorMessage = "HSM certificate issuer")]
+    [Required(ErrorMessage = "HSM certificate subject")]
     public string ValidSubject { get; set; } = string.Empty; 
+
+    [Required(ErrorMessage = "The name of the azure certificate used to sign is required")]
+    public string SigningCertificateName { get; set; } = string.Empty;
 }

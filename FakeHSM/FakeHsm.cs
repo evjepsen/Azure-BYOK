@@ -2,7 +2,6 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using FakeHSM.Interfaces;
-using Infrastructure.Helpers;
 using Infrastructure.Interfaces;
 using Infrastructure.Models;
 using Org.BouncyCastle.Crypto;
