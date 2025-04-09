@@ -2,6 +2,9 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Infrastructure.Interfaces;
 
+/// <summary>
+/// Interface for the certificate cache
+/// </summary>
 public interface ICertificateCache
 {
     /// <summary>
@@ -16,5 +19,10 @@ public interface ICertificateCache
     /// <param name="certificate">The customers certificate</param>
     void AddCertificate(X509Certificate2 certificate);
     
+    /// <summary>
+    /// Used to validate a certificate
+    /// </summary>
+    /// <param name="certificate">The certificate to validate</param>
+    /// <returns>True if the certificate is valid</returns>
     bool ValidateCertificate(X509Certificate2 certificate);
 }

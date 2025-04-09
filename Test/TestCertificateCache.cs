@@ -1,15 +1,16 @@
 using System.Security.Cryptography;
 using Infrastructure;
+using Infrastructure.Interfaces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Test.TestHelpers;
 
 namespace Test;
 
 [TestFixture]
-[TestOf(typeof(Infrastructure.CertificateCache))]
+[TestOf(typeof(CertificateCache))]
 public class TestCertificateCache
 {
-    private Infrastructure.CertificateCache _certificateCache;
+    private ICertificateCache _certificateCache;
 
     [SetUp]
     public void Setup()

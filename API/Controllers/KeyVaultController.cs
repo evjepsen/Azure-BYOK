@@ -134,7 +134,7 @@ public class KeyVaultController : Controller
         }
         
         // Check that the request is valid
-        var jsonKeyTransferBlob = TokenHelper.SerializeJsonObject(request.KeyTransferBlob, JsonNamingPolicy.SnakeCaseLower);
+        var jsonKeyTransferBlob = TokenHelper.SerializeObject(request.KeyTransferBlob);
         var keyData = Encoding.UTF8.GetBytes(jsonKeyTransferBlob);
         var actionResult = await CheckValidityOfImportRequestAsync(request, keyData);
 
@@ -298,7 +298,7 @@ public class KeyVaultController : Controller
         }
         
         // Specify the strategy
-        var jsonKeyTransferBlob = TokenHelper.SerializeJsonObject(requestBase.KeyTransferBlob, JsonNamingPolicy.SnakeCaseLower);
+        var jsonKeyTransferBlob = TokenHelper.SerializeObject(requestBase.KeyTransferBlob);
         var keyData = Encoding.UTF8.GetBytes(jsonKeyTransferBlob);
         var strategy = new SpecifiedTransferBlobStrategy(requestBase.KeyTransferBlob);
         return await RotateKeyWithErrorHandling(requestBase, strategy, keyData);

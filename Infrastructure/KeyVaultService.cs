@@ -65,7 +65,7 @@ public class KeyVaultService : IKeyVaultService
         
         // (Manually) Set up the JsonWebKey
         var requestBody = _tokenService.CreateBodyForRequest(transferBlob, keyOperations);
-        var requestBodyAsJson = TokenHelper.SerializeJsonObject(requestBody, JsonNamingPolicy.SnakeCaseLower);
+        var requestBodyAsJson = TokenHelper.SerializeObject(requestBody);
         
         var url = $"{_applicationOptions.VaultUri}/keys/{name}/import?api-version=7.4";
         
@@ -130,13 +130,7 @@ public class KeyVaultService : IKeyVaultService
         var pemString = kek.Key.ToRSA().ExportRSAPublicKeyPem();
         
         // marshall the Key Vault Key 
-        var kekMarshaled = JsonSerializer.Serialize(kek, new JsonSerializerOptions
-        {
-            WriteIndented = false,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            // UnsafeRelaxedJsonEscaping is used to avoid the conversion of "+" to "\u002B"
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        });
+        var kekMarshaled = TokenHelper.SerializeObjectForAzureSignature(kek); 
         
         // Concatenate kek and pem
         var kekAndPem = Encoding.UTF8.GetBytes(kekMarshaled + pemString);

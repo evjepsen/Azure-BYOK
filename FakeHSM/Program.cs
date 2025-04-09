@@ -53,7 +53,7 @@ public abstract class Program
                 return;
             }
             var blob = fakeHsm.GenerateBlobForUpload(kek, kekId);
-            var jsonBlob = TokenHelper.SerializeJsonObject(blob, JsonNamingPolicy.SnakeCaseLower);
+            var jsonBlob = TokenHelper.SerializeObject(blob);
             Console.WriteLine($"Blob ready to upload (JSON):\n {jsonBlob}");
             
             keyData = Encoding.UTF8.GetBytes(jsonBlob);

@@ -112,10 +112,12 @@ public class TestSignatureService
         // Given a signed response
         var kekName = $"KEK-{Guid.NewGuid()}";
         var kekSignedResponse = await _keyVaultService.GenerateKekAsync(kekName);
+        
         var kek = kekSignedResponse.Kek;
-        var kekMarshaled = TokenHelper.SerializeJsonObject(kek, JsonNamingPolicy.SnakeCaseLower);
+        var kekMarshaled = TokenHelper.SerializeObjectForAzureSignature(kek); ;
         var pem = kekSignedResponse.PemString;
         var kekAndPem = Encoding.UTF8.GetBytes(kekMarshaled + pem);
+        
         // and a base64 encoded signature of the kek and pem
         var signature = kekSignedResponse.Base64EncodedSignature;
         var signatureBytes = Convert.FromBase64String(signature);
