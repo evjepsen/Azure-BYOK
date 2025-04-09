@@ -26,7 +26,7 @@ builder.Services.AddRateLimiter(options =>
         // Get the 'NameIdentifier' claim from the JWT token.
         // Should apply all providers (ISP)
         var userId = httpContext.User.Claims
-            .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            .FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
 
         // Use a fallback value if the claim is not present.
         var partitionKey = string.IsNullOrWhiteSpace(userId) ? "no-name-identifier" : userId;

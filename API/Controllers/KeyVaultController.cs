@@ -80,8 +80,8 @@ public class KeyVaultController : Controller
     /// <response code="400">If the request is invalid</response>
     /// <response code="401">Unauthorized</response>
     /// <response code="404">If the key encryption key or action groups used don't exist</response>
-    /// <response code="500">If there was an internal server error</response>
     /// <response code="429">Too many requests</response>
+    /// <response code="500">If there was an internal server error</response>
     [HttpPost("/import/encryptedKey")]
     public async Task<IActionResult> ImportUserSpecifiedEncryptedKey([FromBody] ImportEncryptedKeyRequest request)
     {
@@ -146,8 +146,8 @@ public class KeyVaultController : Controller
     /// <response code="200">Key was deleted</response>
     /// <response code="404">Key not found</response>
     /// <response code="400">Bad request. See the error code for details</response>
-    /// <response code="500">Internal server error</response>
     /// <response code="429">Too many requests</response>
+    /// <response code="500">Internal server error</response>
     [HttpDelete("delete/{keyName}")]
     public async Task<IActionResult> DeleteKey(string keyName)
     {
