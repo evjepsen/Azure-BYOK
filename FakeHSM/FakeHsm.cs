@@ -1,4 +1,6 @@
-﻿using System.Security.Cryptography;
+﻿using System.Globalization;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using FakeHSM.Interfaces;
 using Infrastructure.Interfaces;
 using Infrastructure.Models;
@@ -11,11 +13,13 @@ namespace FakeHSM;
 
 public class FakeHsm : IFakeHsm
 {
-    private ITokenService _tokenService;
+    private readonly ITokenService _tokenService;
+    private readonly RSA _privateKey;
 
     public FakeHsm(ITokenService tokenService)
     {
         _tokenService = tokenService;
+        _privateKey = RSA.Create(2048);
     }
 
     private byte[] GeneratePrivateRsaKey(int bitLength)
@@ -24,6 +28,7 @@ public class FakeHsm : IFakeHsm
         var sk = rsa.ExportPkcs8PrivateKey();
         return sk;
     }
+    
     private byte[] GenerateAesKey(int bitLength)
     {
         // Generate the AES key
@@ -37,6 +42,24 @@ public class FakeHsm : IFakeHsm
     {
         var ciphertext = EncryptCustomerHsmChosenKey(rsaKek);
         return Convert.ToBase64String(ciphertext);
+    }
+
+    public string SignData(byte[] keyData, DateTime timeStamp)
+    {
+        var timeStampAsString = timeStamp.ToString(CultureInfo.CurrentCulture);
+        var timestampData = System.Text.Encoding.UTF8.GetBytes(timeStampAsString);
+        var data = keyData.Concat(timestampData).ToArray();
+        
+        var signature = _privateKey.SignData(data, HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1);
+        return Convert.ToBase64String(signature);
+    }
+
+    public X509Certificate2 GetCertificateForPrivateKey()
+    {
+        var req = new CertificateRequest("cn=Customer HSM", _privateKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var cert = req.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(1));
+        var certData = cert.Export(X509ContentType.Cert);
+        return new X509Certificate2(certData);
     }
 
     private byte[] EncryptCustomerHsmChosenKey(RSA rsaKek)

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Infrastructure.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 using Infrastructure.Helpers;
@@ -37,7 +38,7 @@ public class TokenService : ITokenService
     {
         // Encode the transfer blob in bytes
         _logger.LogInformation("Serializing key transfer blob into Json");
-        var serializedKeyTransferBlob = TokenHelper.SerializeJsonObject(transferBlob);
+        var serializedKeyTransferBlob = TokenHelper.SerializeObject(transferBlob);
         var bytes = Encoding.UTF8.GetBytes(serializedKeyTransferBlob);
         var transferBlobBase64Encoded = Convert.ToBase64String(bytes);
         

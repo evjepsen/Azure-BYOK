@@ -1,6 +1,8 @@
 using Azure.Security.KeyVault.Keys;
 using FakeHSM;
+using FakeHSM.Interfaces;
 using Infrastructure;
+using Infrastructure.Factories;
 using Infrastructure.Interfaces;
 using Infrastructure.TransferBlobStrategies;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -15,17 +17,35 @@ public class TestKeyVaultService
     private ITokenService _tokenService;
     private IKeyVaultService _keyVaultService;
     private IKeyVaultManagementService _keyVaultManagementService;
-    
+    private readonly List<string> _createdKeys = [];
+    private IFakeHsm _hsm;
+
     [SetUp]
     public void Setup()
     {
         TestHelper.CreateTestConfiguration();
         IHttpClientFactory httpClientFactory = new FakeHttpClientFactory();
+        ICryptographyClientFactory cryptographyClientFactory = new CryptographyClientFactory(httpClientFactory);
+        
         var configuration = TestHelper.CreateTestConfiguration();
         _tokenService = new TokenService(new NullLoggerFactory());
+        
         var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
-        _keyVaultService = new KeyVaultService(_tokenService, httpClientFactory, applicationOptions, new NullLoggerFactory());
+        
+        var certificateCache = new CertificateCache(new NullLoggerFactory(), applicationOptions);
+        var signatureService = new SignatureService(certificateCache,
+            httpClientFactory,
+            applicationOptions,
+            cryptographyClientFactory,
+            new NullLoggerFactory());        
+        _keyVaultService = new KeyVaultService(_tokenService, 
+            signatureService, 
+            httpClientFactory, 
+            applicationOptions, 
+            new NullLoggerFactory());
         _keyVaultManagementService = new KeyVaultManagementService(applicationOptions, new NullLoggerFactory());
+        
+        _hsm = new FakeHsm(_tokenService);
     }
 
     [Test]
@@ -34,6 +54,8 @@ public class TestKeyVaultService
         // Given a key vault service
         // When I ask to create a key encryption key
         var kekName = $"KEK-{Guid.NewGuid()}";
+        _createdKeys.Add(kekName);
+        
         var kekSignedResponse = await _keyVaultService.GenerateKekAsync(kekName);
         var kek = kekSignedResponse.Kek;
         // Then it should be created and have the correct attributes
@@ -50,14 +72,17 @@ public class TestKeyVaultService
     {
         // Given a Key Encryption Key and encrypted key
         var kekName = $"KEK-{Guid.NewGuid()}";
+        _createdKeys.Add(kekName);
+        
         var kekSignedResponse = await _keyVaultService.GenerateKekAsync(kekName);
         var kek = kekSignedResponse.Kek;
         
-        var hsm = new FakeHsm(_tokenService);
-        var encryptedKey = hsm.EncryptPrivateKeyForUpload(kek.Key.ToRSA());
+        var encryptedKey = _hsm.EncryptPrivateKeyForUpload(kek.Key.ToRSA());
         
         // When is ask to upload it
         var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
+        _createdKeys.Add(newKeyName);
+
         var transferBlobStrategy = new EncryptedKeyTransferBlobStrategy(kek.Id.ToString(), encryptedKey, _tokenService);
 
         var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy, ["encrypt", "decrypt"]);
@@ -110,6 +135,7 @@ public class TestKeyVaultService
     {
         // Given a Key Encryption Key
         var keyName = $"Random-recover-{Guid.NewGuid()}";
+        _createdKeys.Add(keyName);
         await _keyVaultService.GenerateKekAsync(keyName);
         
         // Which I delete
@@ -127,13 +153,16 @@ public class TestKeyVaultService
     {
         // Given a Key Encryption Key and transfer blob
         var kekName = $"KEK-{Guid.NewGuid()}";
+        _createdKeys.Add(kekName);
+        
         var kekSignedResponse = await _keyVaultService.GenerateKekAsync(kekName);
         var kek = kekSignedResponse.Kek;
-        var hsm = new FakeHsm(_tokenService);
-        var transferBlob = hsm.GenerateBlobForUpload(kek.Key.ToRSA(), kek.Id.ToString());
+        var transferBlob = _hsm.GenerateBlobForUpload(kek.Key.ToRSA(), kek.Id.ToString());
         
         // When is ask to upload it
         var newKeyName = $"customer-KEY-{Guid.NewGuid()}";
+        _createdKeys.Add(newKeyName);
+        
         var transferBlobStrategy = new SpecifiedTransferBlobStrategy(transferBlob);
         
         var kvRes = await _keyVaultService.UploadKey(newKeyName, transferBlobStrategy, ["encrypt", "decrypt", "sign", "verify", "wrapKey", "unwrapKey"]);
@@ -147,6 +176,8 @@ public class TestKeyVaultService
     {
         // Given a key in the key vault
         var keyName = $"key-{Guid.NewGuid()}";
+        _createdKeys.Add(keyName);
+        
         await _keyVaultService.GenerateKekAsync(keyName);
         
         // When I check whether it exists
@@ -190,4 +221,13 @@ public class TestKeyVaultService
         Assert.That(result.IsValid, Is.False);
         Assert.That(result.ErrorMessage, Is.EqualTo("Invalid key operations detected: abc"));
     } 
+    
+    [OneTimeTearDown]
+    public async Task TearDown()
+    {
+        foreach (var key in _createdKeys)
+        {
+            await _keyVaultService.DeleteKeyAsync(key);
+        }
+    }
 }
