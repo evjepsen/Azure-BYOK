@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Azure;
 using Azure.Core;
@@ -129,7 +130,13 @@ public class KeyVaultService : IKeyVaultService
         var pemString = kek.Key.ToRSA().ExportRSAPublicKeyPem();
         
         // marshall the Key Vault Key 
-        var kekMarshaled = TokenHelper.SerializeJsonObject(kek, JsonNamingPolicy.CamelCase, false);
+        var kekMarshaled = JsonSerializer.Serialize(kek, new JsonSerializerOptions
+        {
+            WriteIndented = false,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            // UnsafeRelaxedJsonEscaping is used to avoid the conversion of "+" to "\u002B"
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        });
         
         // Concatenate kek and pem
         var kekAndPem = Encoding.UTF8.GetBytes(kekMarshaled + pemString);
