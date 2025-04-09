@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using API.Models;
 using Azure;
 using Infrastructure.Helpers;
@@ -55,7 +56,10 @@ public class KeyVaultController : Controller
     /// Endpoint to create a new key encryption key (KEK) to be used to encrypt the user chosen key
     /// </summary>
     /// <param name="kekName">Name of the key encryption key</param>
-    /// <returns>The public part of the key encryption key (To be used to encrypt the user chosen key)</returns>
+    /// <response code="200">Returns the KEK</response>
+    /// <response code="400">If the request is invalid</response>
+    /// <response code="401">Unauthorized</response>
+    /// <response code="500">If there was an internal server error</response>
     [HttpGet("create/{kekName}")]
     public async Task<IActionResult> RequestKeyEncryptionKey(string kekName)
     {
@@ -130,7 +134,7 @@ public class KeyVaultController : Controller
         }
         
         // Check that the request is valid
-        var jsonKeyTransferBlob = TokenHelper.SerializeJsonObject(request.KeyTransferBlob);
+        var jsonKeyTransferBlob = TokenHelper.SerializeJsonObject(request.KeyTransferBlob, JsonNamingPolicy.SnakeCaseLower);
         var keyData = Encoding.UTF8.GetBytes(jsonKeyTransferBlob);
         var actionResult = await CheckValidityOfImportRequestAsync(request, keyData);
 
@@ -294,7 +298,7 @@ public class KeyVaultController : Controller
         }
         
         // Specify the strategy
-        var jsonKeyTransferBlob = TokenHelper.SerializeJsonObject(requestBase.KeyTransferBlob);
+        var jsonKeyTransferBlob = TokenHelper.SerializeJsonObject(requestBase.KeyTransferBlob, JsonNamingPolicy.SnakeCaseLower);
         var keyData = Encoding.UTF8.GetBytes(jsonKeyTransferBlob);
         var strategy = new SpecifiedTransferBlobStrategy(requestBase.KeyTransferBlob);
         return await RotateKeyWithErrorHandling(requestBase, strategy, keyData);

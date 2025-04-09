@@ -1,4 +1,5 @@
 using System.Security.Cryptography.X509Certificates;
+using Azure;
 using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -14,6 +15,7 @@ namespace API.Controllers;
 public class CertificateController : Controller
 {
     private readonly ICertificateCache _certificateCache;
+    private readonly ISignatureService _signatureService;
     private readonly ILogger<CertificateController> _logger;
 
     /// <summary>
@@ -21,9 +23,13 @@ public class CertificateController : Controller
     /// </summary>
     /// <param name="certificateCache">To store the certificate</param>
     /// <param name="loggerFactory">The logger factory for the audit controller</param>
-    public CertificateController(ICertificateCache certificateCache, ILoggerFactory loggerFactory)
+    /// <param name="signatureService">The signature service used by the certificate controller</param>
+    public CertificateController(ICertificateCache certificateCache, 
+        ILoggerFactory loggerFactory, 
+        ISignatureService signatureService)
     {
         _certificateCache = certificateCache;
+        _signatureService = signatureService;
         _logger = loggerFactory.CreateLogger<CertificateController>();
     }
 
@@ -91,5 +97,33 @@ public class CertificateController : Controller
         }
         
         return Ok("The certificate was uploaded successfully");
+    }
+
+    /// <summary>
+    /// Retrieves the certificate for the key that Azure and the middleware use to sign the KEK (key encryption key) 
+    /// </summary>
+    /// <response code="200">If the certificate was retrieved successfully</response>
+    /// <response code="400">If the request is invalid</response>
+    /// <response code="500">If there was an internal server error</response>
+    [HttpGet]
+    public async Task<IActionResult> GetAzureSigningCertificate()
+    {
+        try
+        {
+            var azureCertificate = await _signatureService.GetAzureSigningCertificate();
+            var certificate = new X509Certificate2(azureCertificate.Cer);
+            var certificateAsPem = certificate.ExportCertificatePem();
+            return Ok(certificateAsPem);
+        }
+        catch (RequestFailedException e)
+        {
+            _logger.LogError("Azure failed in retrieving the certificate {Message}", e.Message);
+            return StatusCode(e.Status, $"Azure failed in retrieving the certificate: {e.ErrorCode}");
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("An error occured when retrieving the certificate from azure {Message}", e.Message);
+            return BadRequest("An unexpected error occurred when retrieving the certificate from azure");
+        }
     }
 }

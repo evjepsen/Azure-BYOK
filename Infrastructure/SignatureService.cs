@@ -120,7 +120,6 @@ public class SignatureService : ISignatureService
             // Rethrow the exception to propagate exception to controller
             throw;
         }
-         
     }
 
     public async Task<KeyVaultCertificateWithPolicy> GetAzureSigningCertificate()

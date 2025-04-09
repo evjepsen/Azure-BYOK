@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
 using FakeHSM.Interfaces;
 using Infrastructure;
 using Infrastructure.Helpers;
@@ -52,7 +53,7 @@ public abstract class Program
                 return;
             }
             var blob = fakeHsm.GenerateBlobForUpload(kek, kekId);
-            var jsonBlob = TokenHelper.SerializeJsonObject(blob);
+            var jsonBlob = TokenHelper.SerializeJsonObject(blob, JsonNamingPolicy.SnakeCaseLower);
             Console.WriteLine($"Blob ready to upload (JSON):\n {jsonBlob}");
             
             keyData = Encoding.UTF8.GetBytes(jsonBlob);

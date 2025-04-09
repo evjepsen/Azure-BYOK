@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Infrastructure;
 using Infrastructure.Factories;
 using Infrastructure.Helpers;
@@ -112,7 +113,7 @@ public class TestSignatureService
         var kekName = $"KEK-{Guid.NewGuid()}";
         var kekSignedResponse = await _keyVaultService.GenerateKekAsync(kekName);
         var kek = kekSignedResponse.Kek;
-        var kekMarshaled = TokenHelper.SerializeJsonObject(kek);
+        var kekMarshaled = TokenHelper.SerializeJsonObject(kek, JsonNamingPolicy.SnakeCaseLower);
         var pem = kekSignedResponse.PemString;
         var kekAndPem = Encoding.UTF8.GetBytes(kekMarshaled + pem);
         // and a base64 encoded signature of the kek and pem

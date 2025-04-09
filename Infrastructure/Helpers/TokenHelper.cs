@@ -4,12 +4,12 @@ namespace Infrastructure.Helpers;
 
 public static class TokenHelper
 {
-    public static string SerializeJsonObject<T>(T jsonObject) 
+    public static string SerializeJsonObject<T>(T jsonObject, JsonNamingPolicy jsonNamingPolicy, bool writeIndented = true) 
     {
         return JsonSerializer.Serialize(jsonObject, new JsonSerializerOptions
         {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+            WriteIndented = writeIndented,
+            PropertyNamingPolicy = jsonNamingPolicy
         });
     }
 
