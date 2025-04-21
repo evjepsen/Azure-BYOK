@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Test.TestHelpers;
 using FakeHsm = FakeHSM.FakeHsm;
 
-namespace Test;
+namespace Test.Infrastructure;
 
 [TestFixture]
 [TestOf(typeof(FakeHsm))]

@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using Infrastructure;
 using Infrastructure.Factories;
 using Infrastructure.Helpers;
@@ -8,7 +7,7 @@ using Infrastructure.Interfaces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Test.TestHelpers;
 
-namespace Test;
+namespace Test.Infrastructure;
 
 [TestFixture]
 [TestOf(typeof(SignatureService))]

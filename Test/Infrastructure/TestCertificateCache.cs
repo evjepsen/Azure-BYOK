@@ -4,7 +4,7 @@ using Infrastructure.Interfaces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Test.TestHelpers;
 
-namespace Test;
+namespace Test.Infrastructure;
 
 [TestFixture]
 [TestOf(typeof(CertificateCache))]
@@ -17,7 +17,7 @@ public class TestCertificateCache
     {
         var configuration = TestHelper.CreateTestConfiguration();
         var applicationOptions = TestHelper.CreateApplicationOptions(configuration);
-        _certificateCache = new Infrastructure.CertificateCache(new NullLoggerFactory(), applicationOptions);
+        _certificateCache = new CertificateCache(new NullLoggerFactory(), applicationOptions);
     }
     
     [Test]

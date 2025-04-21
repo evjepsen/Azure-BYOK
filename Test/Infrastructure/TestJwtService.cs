@@ -5,7 +5,7 @@ using Infrastructure.Interfaces;
 using Infrastructure.Options;
 using Test.TestHelpers;
 
-namespace Test;
+namespace Test.Infrastructure;
 
 [TestFixture]
 [TestOf(typeof(JwtService))]

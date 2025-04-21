@@ -8,7 +8,7 @@ using Infrastructure.TransferBlobStrategies;
 using Microsoft.Extensions.Logging.Abstractions;
 using Test.TestHelpers;
 
-namespace Test;
+namespace Test.Infrastructure;
 
 [TestFixture]
 [TestOf(typeof(KeyVaultService))]
