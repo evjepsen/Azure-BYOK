@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using Azure.Security.KeyVault.Keys.Cryptography;
 using Google.Apis.Auth.AspNetCore3;
 using Infrastructure;
@@ -17,6 +18,43 @@ using Microsoft.OpenApi.Models;
 using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Add rate limiter to avoid DoS and resource exhaustion
+builder.Services.AddRateLimiter(options =>
+{
+    // Add a global rate limiter
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        // Get the 'NameIdentifier' claim from the JWT token.
+        // Should apply all providers (ISP)
+        var userId = httpContext.User.Claims
+            .FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+
+        // Use a fallback value if the claim is not present.
+        var partitionKey = string.IsNullOrWhiteSpace(userId) ? "no-name-identifier" : userId;
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 240,      // dummy value
+                QueueLimit = 0,
+                Window = TimeSpan.FromMinutes(1)
+            });
+    });
+    
+    // Handle rejections due to rate limiting
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        // setup response
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.Headers.RetryAfter = "60";
+        
+        await context.HttpContext.Response.WriteAsync($"You have exceeded the rate limit. Please try again later", cancellationToken);
+    };
+});
+
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
