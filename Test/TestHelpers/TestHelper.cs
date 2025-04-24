@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using Infrastructure.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
@@ -27,5 +29,21 @@ public static class TestHelper
         var applicationOptions = new ApplicationOptions();
         configuration.GetSection(ApplicationOptions.Application).Bind(applicationOptions);
         return Options.Create(applicationOptions);
+    }
+    
+    public static X509Certificate2 CreateCertificate(RSA rsa, string subjectName, DateTimeOffset notBefore, DateTimeOffset notAfter)
+    {
+        var req = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var cert = req.CreateSelfSigned(notBefore, notAfter);
+        var certData = cert.Export(X509ContentType.Cert);
+        return new X509Certificate2(certData);
+    }
+
+    public static (string signature, byte[] data) CreateSignature(RSA key)
+    {
+        var data = "Test data";
+        var dataBytes = System.Text.Encoding.UTF8.GetBytes(data);
+        var signature = key.SignData(dataBytes, HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1);
+        return (Convert.ToBase64String(signature), dataBytes);
     }
 }

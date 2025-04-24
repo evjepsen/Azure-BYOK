@@ -19,6 +19,8 @@ You have to set up the following variables:
 - `ResourceGroupName`
 - `KeyVaultResourceName`
 - `AllowedEmails`
+- `SigningCertificateName`
+- `ValidSubject`
 
 They are read from the appsettings.azure.json, so you have create one in the `API` directory
 
@@ -35,7 +37,8 @@ Example ´appsettings.azure.json´ file:
       "john.doe@gmail.com",
       "kahn@example.com"
     ],
-    "SigningCertificateName": "BYOK-Signing-Certificate"
+    "SigningCertificateName": "BYOK-Signing-Certificate",
+    "ValidSubject" : "cn=Customer HSM"
   }
 }
 ```
