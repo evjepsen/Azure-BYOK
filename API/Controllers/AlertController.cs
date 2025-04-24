@@ -37,6 +37,7 @@ public class AlertController : Controller
     /// <response code="401">Unauthorized</response>
     /// <response code="403">Forbidden</response>
     /// <response code="404">If the action group couldn't be found</response>
+    /// <response code="429">Too many requests</response>
     /// <response code="500">If there was an internal server error</response>
     [HttpGet("/group/{name}")]
     public async Task<IActionResult> GetActionGroup(string name)
@@ -69,6 +70,7 @@ public class AlertController : Controller
     /// <response code="400">If the request is invalid</response>
     /// <response code="401">Unauthorized</response>
     /// <response code="403">Forbidden</response>
+    /// <response code="429">Too many requests</response>
     /// <response code="500">If there was an internal server error</response>
     [HttpPost("/group/{name}")]
     public async Task<IActionResult> CreateActionGroup(string name, [FromBody] List<EmailReceiver> receivers)
@@ -100,6 +102,7 @@ public class AlertController : Controller
     /// <response code="400">If the request is invalid</response>
     /// <response code="401">Unauthorized</response>
     /// <response code="403">Forbidden</response>
+    /// <response code="429">Too many requests</response>
     /// <response code="500">If there was an internal server error</response>
     [HttpPost("/alert/{name}")]
     public async Task<IActionResult> CreateKeyVaultAlert(string name, [FromBody] List<string> actionGroups)

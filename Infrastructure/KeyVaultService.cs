@@ -110,7 +110,7 @@ public class KeyVaultService : IKeyVaultService
         {
             Enabled = true,                                                         // The key is ready to be used
             Exportable = false,                                                     // The private key cannot be exported 
-            ExpiresOn = DateTimeOffset.Now.AddHours(12),                            // Is active for 12 hours
+            ExpiresOn = DateTimeOffset.Now.AddHours(3),                             // Is active for 3 hours
             KeyOperations = { KeyOperation.Import },                                // Can only be used to import the TDE Protector
             KeySize = 2048                                                          // Key size of 2048 bits 
         };

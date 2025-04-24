@@ -35,7 +35,7 @@ public class AuditController : Controller
     /// <param name="numOfDays">The time period to get logs in days</param>
     /// <response code="200">The key activity log entries for the specified period in JSON format</response>
     /// <response code="400">If the request is invalid</response>
-    /// <response code="401">Unauthorized</response>
+    /// <response code="429">Too many requests</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("/keys/{numOfDays:int}")]
     public async Task<IActionResult> GetKeyOperationsPerformed(int numOfDays)
@@ -51,6 +51,7 @@ public class AuditController : Controller
     /// <response code="200">Returns the logs of the operations performed on the vault in the time period</response>
     /// <response code="400">If the request is invalid</response>
     /// <response code="401">Unauthorized</response>
+    /// <response code="429">Too many requests</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("/vault/{numOfDays:int}")]
     public async Task<IActionResult> GetVaultOperationsPerformed(int numOfDays)
@@ -66,6 +67,7 @@ public class AuditController : Controller
     /// <response code="200">Returns the activity logs for the time period</response>
     /// <response code="400">If the request is invalid</response>
     /// <response code="401">Unauthorized</response>
+    /// <response code="429">Too many requests</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("/activity/{numOfDays:int}")]
     public async Task<IActionResult> GetKeyVaultActivityLogs(int numOfDays)

@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using API.Models;
 using Azure;
 using Infrastructure.Helpers;
@@ -45,7 +44,6 @@ public class KeyVaultController : Controller
         _logger = loggerFactory.CreateLogger<KeyVaultController>();
         _keyVaultManagementService = keyVaultManagementService;
         _tokenService = tokenService;
-        _signatureService = signatureService;
         _keyVaultService = keyVaultService;
         _alertService = alertService;
         _signatureService = signatureService;
@@ -60,6 +58,7 @@ public class KeyVaultController : Controller
     /// <response code="400">If the request is invalid</response>
     /// <response code="401">Unauthorized</response>
     /// <response code="500">If there was an internal server error</response>
+    /// <response code="429">Too many requests</response>
     [HttpGet("create/{kekName}")]
     public async Task<IActionResult> RequestKeyEncryptionKey(string kekName)
     {
@@ -89,6 +88,7 @@ public class KeyVaultController : Controller
     /// <response code="400">If the request is invalid</response>
     /// <response code="401">Unauthorized</response>
     /// <response code="404">If the key encryption key or action groups used don't exist</response>
+    /// <response code="429">Too many requests</response>
     /// <response code="500">If there was an internal server error</response>
     [HttpPost("/import/encryptedKey")]
     public async Task<IActionResult> ImportUserSpecifiedEncryptedKey([FromBody] ImportEncryptedKeyRequest request)
@@ -122,6 +122,7 @@ public class KeyVaultController : Controller
     /// <response code="400">If the request is invalid</response>
     /// <response code="401">Unauthorized</response>
     /// <response code="404">If the key encryption key or action groups used don't exist</response>
+    /// <response code="429">Too many requests</response>
     /// <response code="500">If there was an internal server error</response>
     [HttpPost("/import/blob")]
     public async Task<IActionResult> ImportUserSpecifiedTransferBlob([FromBody] ImportKeyBlobRequest request)
@@ -156,6 +157,7 @@ public class KeyVaultController : Controller
     /// <response code="200">Key was deleted</response>
     /// <response code="404">Key not found</response>
     /// <response code="400">Bad request. See the error code for details</response>
+    /// <response code="429">Too many requests</response>
     /// <response code="500">Internal server error</response>
     [HttpDelete("delete/{keyName}")]
     public async Task<IActionResult> DeleteKey(string keyName)
@@ -184,6 +186,7 @@ public class KeyVaultController : Controller
     /// <param name="keyName">The name of the key to purge</param>
     /// <response code="204">Deleted Key was purged</response>
     /// <response code="404">Key not found</response>
+    /// <response code="429">Too many requests</response>
     /// <response code="400">Bad request. See the error code for details</response>
     /// <response code="500">Internal server error</response>
     [HttpDelete("purgeDeletedKey/{keyName}")]
@@ -227,6 +230,7 @@ public class KeyVaultController : Controller
     /// <response code="200">Deleted Key was recovered</response>
     /// <response code="400">Bad request</response>
     /// <response code="404">Key not found</response>
+    /// <response code="429">Too many requests</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("recoverDeletedKey/{kekName}")]
     public async Task<IActionResult> RecoverDeletedKey(string kekName)
@@ -262,6 +266,7 @@ public class KeyVaultController : Controller
     /// <response code="200">Key was rotated</response>
     /// <response code="400">Bad request</response>
     /// <response code="404">Key not found</response>
+    /// <response code="429">Too many requests</response>
     /// <response code="500">Internal server error</response>
     [HttpPost("rotate/encryptedKey")]
     public async Task<IActionResult> RotateKeyUsingNewEncryptedKey([FromBody] RotateEncryptedKeyRequest request)
@@ -286,6 +291,7 @@ public class KeyVaultController : Controller
     /// <response code="200">Key was rotated</response>
     /// <response code="400">Bad request</response>
     /// <response code="404">Key not found</response>
+    /// <response code="429">Too many requests</response>
     /// <response code="500">Internal server error</response>
     [HttpPost("rotate/blob")]
     public async Task<IActionResult> RotateKeyUsingBlob([FromBody] RotateKeyBlobRequestBase requestBase)
