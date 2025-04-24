@@ -13,6 +13,7 @@ namespace API.Controllers;
 public class AuditController : Controller
 {
     private readonly IAuditService _auditService;
+    private readonly IKeyVaultManagementService _keyVaultManagementService;
     private readonly ILogger<AuditController> _logger;
 
     /// <summary>
@@ -20,10 +21,12 @@ public class AuditController : Controller
     /// </summary>
     /// <param name="auditService">The audit service used to access the logs</param>
     /// <param name="loggerFactory">The logger factory for the audit controller</param>
-    public AuditController(IAuditService auditService, ILoggerFactory loggerFactory)
+    /// <param name="keyVaultManagementService">The key vault management service used to access role assigmnets</param>
+    public AuditController(IAuditService auditService, ILoggerFactory loggerFactory, IKeyVaultManagementService keyVaultManagementService)
     {
         _logger = loggerFactory.CreateLogger<AuditController>();
         _auditService = auditService;
+        _keyVaultManagementService = keyVaultManagementService;
     }
 
     /// <summary>
@@ -32,6 +35,7 @@ public class AuditController : Controller
     /// <param name="numOfDays">The time period to get logs in days</param>
     /// <response code="200">The key activity log entries for the specified period in JSON format</response>
     /// <response code="400">If the request is invalid</response>
+    /// <response code="401">Unauthorized</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("/keys/{numOfDays:int}")]
     public async Task<IActionResult> GetKeyOperationsPerformed(int numOfDays)
@@ -46,6 +50,7 @@ public class AuditController : Controller
     /// <param name="numOfDays">The time period to get logs in days</param>
     /// <response code="200">Returns the logs of the operations performed on the vault in the time period</response>
     /// <response code="400">If the request is invalid</response>
+    /// <response code="401">Unauthorized</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("/vault/{numOfDays:int}")]
     public async Task<IActionResult> GetVaultOperationsPerformed(int numOfDays)
@@ -60,12 +65,42 @@ public class AuditController : Controller
     /// <param name="numOfDays">The time period to get logs in days</param>
     /// <response code="200">Returns the activity logs for the time period</response>
     /// <response code="400">If the request is invalid</response>
+    /// <response code="401">Unauthorized</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("/activity/{numOfDays:int}")]
     public async Task<IActionResult> GetKeyVaultActivityLogs(int numOfDays)
     {
         _logger.LogInformation("Getting vault activity from the last {numOfDays} days", numOfDays);
         return await GetAuditLogs(_auditService.GetKeyVaultActivityLogsAsync, numOfDays);
+    }
+    
+    /// <summary>
+    /// Get the key vault's role assignments
+    /// </summary>
+    /// <response code="200">The role assignments linked to the key vault</response>
+    /// <response code="400">If the request is invalid</response>
+    /// <response code="401">Unauthorized</response>
+    /// <response code="500">Internal server error</response>
+    [HttpGet("/roleAssignments")]
+    public async Task<IActionResult> GetRoleAssignments()
+    {
+        _logger.LogInformation("Getting role assignments");
+        try
+        {
+            var res = await _keyVaultManagementService.GetRoleAssignmentsAsync();
+            res = res.ToList();
+            return Ok(res);
+        }
+        catch (Azure.RequestFailedException e)
+        {
+            _logger.LogError("Azure failed to get the role assignments: {errorMessage}", e.Message);
+            return StatusCode(e.Status, e.ErrorCode);
+        }
+        catch (Exception)
+        {
+            _logger.LogError("An unexpected error occured when getting the role assignments");
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+        }
     }
 
     // Helper method that handles error handling on calls to get audit logs

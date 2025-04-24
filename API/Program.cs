@@ -96,7 +96,6 @@ builder.Services.AddOptions<ApplicationOptions>()
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
-
 // Authentication
 builder.Services.AddAuthentication(options =>
     {
