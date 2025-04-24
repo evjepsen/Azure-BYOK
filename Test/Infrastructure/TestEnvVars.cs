@@ -2,7 +2,7 @@ using Infrastructure.Options;
 using Microsoft.Extensions.Options;
 using Test.TestHelpers;
 
-namespace Test;
+namespace Test.Infrastructure;
 
 [TestFixture]
 public class TestEnvVars
