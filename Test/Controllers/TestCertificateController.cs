@@ -18,13 +18,13 @@ public class TestCertificateController
     private Mock<ILogger<CertificateController>> _mockLogger;
     private Mock<ICertificateCache> _mockCertificateCache;
 
-    private IFormFile CreateExpiredCertFile()
+    private IFormFile CreateCertTestFile(DateTime notBefore, DateTime notAfter)
     {
         // create a self-signed certificate, in pem format
         using var rsa = RSA.Create(2048);
         
         var request = new CertificateRequest("CN=Test", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-2), DateTimeOffset.UtcNow.AddDays(-1));
+        var cert = request.CreateSelfSigned(notBefore,notAfter);
         var certData = cert.Export(X509ContentType.Pfx);
         var certFile = new Mock<IFormFile>();
         certFile.Setup(f => f.Length).Returns(certData.Length);
@@ -32,7 +32,6 @@ public class TestCertificateController
         certFile.Setup(f => f.OpenReadStream()).Returns(stream);
         certFile.Setup(f => f.CopyToAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
             .Callback<Stream, CancellationToken>((s, c) => stream.CopyTo(s));
-        // certFile.Setup(f => f.FileName).Returns("expired_cert.pfx");
         
         return certFile.Object;
     }
@@ -125,7 +124,9 @@ public class TestCertificateController
     {
 
         // Given a expired certificate file as IFormFile
-        var fakeIForm = CreateExpiredCertFile();
+        var notBefore = DateTime.UtcNow.AddDays(-2);
+        var notAfter = DateTime.UtcNow.AddDays(-1);
+        var fakeIForm = CreateCertTestFile(notBefore, notAfter);
         
         // when I upload the certificate
         var result = await _certificateController.UploadCustomerCertificate(fakeIForm);
@@ -145,6 +146,61 @@ public class TestCertificateController
                 LogLevel.Error,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate has expired", o.ToString(),
+                    StringComparison.InvariantCultureIgnoreCase)),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once
+        );
+        // However, the logger should not log the exception
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate is not yet valid", o.ToString(),
+                    StringComparison.InvariantCultureIgnoreCase)),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never
+        );
+    }
+    
+    [Test]
+    public async Task ShouldNotYetValidCertificateReturnBadRequest()
+    {
+        // Given a certificate file as IFormFile
+        var notBefore = DateTime.UtcNow.AddDays(1);
+        var notAfter = DateTime.UtcNow.AddDays(2);
+        var fakeIForm = CreateCertTestFile(notBefore, notAfter);
+        
+        // when I upload the certificate
+        var result = await _certificateController.UploadCustomerCertificate(fakeIForm);
+        
+        // then it should return BadRequest
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());
+        
+        
+        var gotStatusCode = (ObjectResult) result; // safe cast status code
+        // and the status code should be 400
+        Assert.That(gotStatusCode.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        
+        // and the logger not should the expired error
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate has expired", o.ToString(),
+                    StringComparison.InvariantCultureIgnoreCase)),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never
+        );
+        // However, it should log the not yet valid error
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate is not yet valid", o.ToString(),
                     StringComparison.InvariantCultureIgnoreCase)),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
