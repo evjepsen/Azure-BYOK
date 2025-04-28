@@ -64,7 +64,7 @@ public class KeyVaultController : Controller
     {
         try
         {
-            _logger.LogInformation("Creating a new key encryption key");
+            _logger.LogInformation("Creating a new key encryption key: {kekName}", kekName);
             var kek = await _keyVaultService.GenerateKekAsync(kekName);
             return Ok(kek);
         }
@@ -318,7 +318,8 @@ public class KeyVaultController : Controller
 
         if (!isThereAKeyVaultAlert)
         {
-            return BadRequest("Missing a key vault alert");
+            _logger.LogWarning(Constants.MissingKeyVaultAlert);
+            return BadRequest(Constants.MissingKeyVaultAlert);
         }
 
         if (requestBase is IActionGroupsRequest actionGroupRequest)
@@ -326,7 +327,8 @@ public class KeyVaultController : Controller
             // There must be at least one Action Group
             if (!actionGroupRequest.ActionGroups.Any())
             {
-                return BadRequest("Missing an Action Group");
+                _logger.LogWarning(Constants.MissingActionGroup);
+                return BadRequest(Constants.MissingActionGroup);
             }
         
             // Each of them have to exist
@@ -403,29 +405,31 @@ public class KeyVaultController : Controller
         
         // Try to create an alert for the new key
         _logger.LogInformation("Creating a log alert for the new key {keyName}", requestBase.Name);
-        bool created;
+        var created = false;
+        ObjectResult result;
         try
         {
             await _alertService.CreateAlertForKeyAsync($"{requestBase.Name}-Key-Alert", response.Key.Kid!, requestBase.ActionGroups);
             created = true;
+            result = Ok(response);
         }
         catch (RequestFailedException e)
         {
             _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}",
                 requestBase.Name, e.Message);
-            return StatusCode(e.Status, e.ErrorCode);
+            result = StatusCode(e.Status, e.ErrorCode);
         }
         catch (HttpRequestException e)
         {
             _logger.LogError("Azure failed to create an alert for the uploaded key {keyName}: {errorMessage}",
                 requestBase.Name, e.Message);
-            return BadRequest($"Azure failed to create an alert for the uploaded key key: {e.Message}");
+            result = BadRequest($"Azure failed to create an alert for the uploaded key key: {e.Message}");
         }
         catch (Exception)
         {
             _logger.LogError("An unexpected error occurred when creating a key alert for the key {keyName}",
                 requestBase.Name);
-            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+            result = StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
         }
         // Delete the new key if creating the alert fails
         if (!created)
@@ -434,7 +438,7 @@ public class KeyVaultController : Controller
             _logger.LogWarning("The key {keyName} was deleted because the alert could not be created", requestBase.Name);
         }
         
-        return Ok(response);
+        return result;
     }
     
     // Helper method to complete the rotation
@@ -494,22 +498,21 @@ public class KeyVaultController : Controller
         {
             isSignatureValid = _signatureService.IsCustomerSignatureValid(requestBase.SignatureBase64, data);
         }
-        catch (Exception e)
-        {
+        catch (Exception e) {
             _logger.LogError("There was an error while checking the signature: {errorMessage}", e.Message);
-            return BadRequest("There was an error while checking the signature");
+            return StatusCode(StatusCodes.Status500InternalServerError, "There was an error while checking the signature");
         }
 
         if (!isSignatureValid)
         {
-            _logger.LogWarning("The signature is invalid");
-            return BadRequest("The signature is invalid");
+            _logger.LogWarning(Constants.InvalidSignatureErrorMessage);
+            return BadRequest(Constants.InvalidSignatureErrorMessage);
         }
         
         if (requestBase.TimeStamp < DateTime.UtcNow.AddMinutes(-10) || DateTime.UtcNow.AddMinutes(10) < requestBase.TimeStamp)
         {
-            _logger.LogWarning("The upload request is not longer valid");
-            return BadRequest("The upload request is not longer valid");
+            _logger.LogWarning(Constants.TheRequestIsNoLongerValid);
+            return BadRequest(Constants.TheRequestIsNoLongerValid);
         }
 
         return Ok();
