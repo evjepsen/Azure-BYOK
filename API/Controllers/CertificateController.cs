@@ -71,6 +71,7 @@ public class CertificateController : Controller
             
             if (certificate.NotAfter < DateTime.UtcNow)
             {
+                _logger.LogError("Certificate has expired");
                 return BadRequest("Certificate has expired");
             }
         }
