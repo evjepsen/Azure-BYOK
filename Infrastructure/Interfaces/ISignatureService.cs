@@ -43,6 +43,15 @@ public interface ISignatureService
     /// <summary>
     /// Retries the azure signing certificate from the key vault
     /// </summary>
-    /// <returns>The Azure signing certifcate</returns>
+    /// <returns>The Azure signing certificate</returns>
+    /// <exception cref="ResourceNotFound">If the request to the key vault has no value (probably does not exsist)</exception>
     public Task<KeyVaultCertificateWithPolicy> GetAzureSigningCertificate();
+
+    /// <summary>
+    /// Converts the KeyVaultCertificateWithPolicy to a PEM string
+    /// </summary>
+    /// <param name="azureCertificate"></param>
+    /// <returns>String </returns>
+    public string KeyVaultCertificateToX509PemString(KeyVaultCertificateWithPolicy azureCertificate);
+
 }

@@ -137,4 +137,20 @@ public class TestSignatureService
         // Then it should be there
         Assert.That(cert, Is.Not.Null);
     }
+    
+    [Test]
+    public async Task ShouldBeAbleToConvertKeyVaultCertificateToPemString()
+    {
+        
+        // Given a certificate in the key vault
+        var cert = await _signatureService.GetAzureSigningCertificate();
+        // When I ask to convert the certificate to a PEM string
+        var pemString = _signatureService.KeyVaultCertificateToX509PemString(cert);
+        
+        // Then it should not be null
+        Assert.That(pemString, Is.Not.Null);
+        // and it should be a valid PEM string 
+        Assert.That(pemString, Does.StartWith("-----BEGIN CERTIFICATE-----"));
+        Assert.That(pemString, Does.EndWith("-----END CERTIFICATE-----"));
+    }
 }

@@ -1,5 +1,7 @@
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Azure;
+using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -102,6 +104,7 @@ public class CertificateController : Controller
             return BadRequest("Error adding the certificate to the cache");
         }
         
+        _logger.LogInformation("Certificate was uploaded successfully");
         return Ok("The certificate was uploaded successfully");
     }
 
@@ -117,9 +120,20 @@ public class CertificateController : Controller
         try
         {
             var azureCertificate = await _signatureService.GetAzureSigningCertificate();
-            var certificate = new X509Certificate2(azureCertificate.Cer);
-            var certificateAsPem = certificate.ExportCertificatePem();
+            _logger.LogInformation("Certificate was retrieved from Azure successfully");
+            var certificateAsPem = _signatureService.KeyVaultCertificateToX509PemString(azureCertificate);
+            _logger.LogInformation("Certificate was converted to PEM successfully");
             return Ok(certificateAsPem);
+        }
+        catch (ResourceNotFoundException)
+        {
+            _logger.LogError("Certificate was not found");
+            return StatusCode(StatusCodes.Status404NotFound, "Certificate was not found");
+        }
+        catch (CryptographicException)
+        {
+            _logger.LogError("Certificate was cryptographically invalid");
+            return StatusCode(StatusCodes.Status500InternalServerError, "Certificate was cryptographically invalid");
         }
         catch (RequestFailedException e)
         {

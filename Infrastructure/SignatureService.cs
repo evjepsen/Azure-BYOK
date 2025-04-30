@@ -6,6 +6,7 @@ using Azure.Core.Pipeline;
 using Azure.Identity;
 using Azure.Security.KeyVault.Certificates;
 using Azure.Security.KeyVault.Keys.Cryptography;
+using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
 using Infrastructure.Options;
 using Microsoft.Extensions.Logging;
@@ -124,14 +125,33 @@ public class SignatureService : ISignatureService
 
     public async Task<KeyVaultCertificateWithPolicy> GetAzureSigningCertificate()
     {
+        _logger.LogInformation("Getting signing certificate from key vault");
         var certWithPolicy = await _client.GetCertificateAsync(_applicationOptions.SigningCertificateName);
-
         if (!certWithPolicy.HasValue)
         {
-            throw new InvalidOperationException("No certificate was found.");
+            _logger.LogError("Certificate not found in key vault");
+            throw new ResourceNotFoundException("No certificate was found.");
         }
         
+        _logger.LogInformation("Certificate was retrieved from key vault");
         return certWithPolicy.Value;
+    }
+
+    public string KeyVaultCertificateToX509PemString(KeyVaultCertificateWithPolicy azureCertificate)
+    {
+        try
+        {
+            var certificate = new X509Certificate2(azureCertificate.Cer);
+            var certificateAsPem = certificate.ExportCertificatePem();
+            _logger.LogInformation("Converted certificate to PEM");
+            return certificateAsPem;
+
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("Could not convert certificate to PEM. Failed with error: {error}", e.Message);
+            throw;
+        }
     }
 
     // Helper method to get the digest
