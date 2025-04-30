@@ -84,7 +84,7 @@ public class AuditService : IAuditService
         if (!result.HasValue || result.Value.Status != 0)
         {
             _logger.LogWarning("Failed to get logs from Azure");
-            throw new HttpRequestException("The query did not return any results");
+            throw new RequestFailedException("The query did not return any results");
         }
         
         // Translate the parsed records into json and then serialise the whole thing as a Json List

@@ -21,7 +21,7 @@ public class AuditController : Controller
     /// </summary>
     /// <param name="auditService">The audit service used to access the logs</param>
     /// <param name="loggerFactory">The logger factory for the audit controller</param>
-    /// <param name="keyVaultManagementService">The key vault management service used to access role assigmnets</param>
+    /// <param name="keyVaultManagementService">The key vault management service used to access role assignments</param>
     public AuditController(IAuditService auditService, ILoggerFactory loggerFactory, IKeyVaultManagementService keyVaultManagementService)
     {
         _logger = loggerFactory.CreateLogger<AuditController>();
@@ -72,7 +72,7 @@ public class AuditController : Controller
     [HttpGet("/activity/{numOfDays:int}")]
     public async Task<IActionResult> GetKeyVaultActivityLogs(int numOfDays)
     {
-        _logger.LogInformation("Getting vault activity from the last {numOfDays} days", numOfDays);
+        _logger.LogInformation("Getting vault activity logs from the last {numOfDays} days", numOfDays);
         return await GetAuditLogs(_auditService.GetKeyVaultActivityLogsAsync, numOfDays);
     }
     
@@ -100,8 +100,8 @@ public class AuditController : Controller
         }
         catch (Exception)
         {
-            _logger.LogError("An unexpected error occured when getting the role assignments");
-            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+            _logger.LogError(Constants.InternalServerErrorOccuredWhenGettingRoleAssignments);
+            return StatusCode(StatusCodes.Status500InternalServerError, Constants.InternalServerErrorOccuredWhenGettingRoleAssignments);
         }
     }
 
@@ -118,15 +118,10 @@ public class AuditController : Controller
             _logger.LogError("Azure failed to get the logs: {errorMessage}", e.Message);
             return StatusCode(e.Status, e.ErrorCode);
         }
-        catch (HttpRequestException e)
-        {
-            _logger.LogError("Azure failed to get/find the logs: {errorMessage}", e.Message);
-            return StatusCode(StatusCodes.Status404NotFound, e.Message);
-        }
         catch (Exception)
         {
-            _logger.LogError("An unexpected error occured when getting the logs");
-            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
+            _logger.LogError(Constants.InternalServerErrorOccuredGettingTheLogs);
+            return StatusCode(StatusCodes.Status500InternalServerError, Constants.InternalServerErrorOccuredGettingTheLogs);
         }
     }
 }

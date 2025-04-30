@@ -29,5 +29,16 @@ public static class Constants
     /// The key vault does not have soft delete enabled error message
     /// </summary>
     public const string SoftDeleteErrorMessage = "The key vault does not have soft delete enabled";
-    
+
+    /// <summary>
+    /// When an unexpected error occurs when getting logs
+    /// </summary>
+    public const string InternalServerErrorOccuredGettingTheLogs = "An unexpected error occured when getting the logs";
+
+    /// <summary>
+    /// When an unexpected error occurs when getting the role assignments
+    /// </summary>
+    public const string InternalServerErrorOccuredWhenGettingRoleAssignments =
+        "An unexpected error occured when getting the role assignments";
+
 }
