@@ -24,4 +24,10 @@ public static class Constants
     /// The request is missing an action group error message
     /// </summary>
     public const string MissingActionGroup = "Trying to upload a key without an action group";
+    
+    /// <summary>
+    /// The key vault does not have soft delete enabled error message
+    /// </summary>
+    public const string SoftDeleteErrorMessage = "The key vault does not have soft delete enabled";
+    
 }

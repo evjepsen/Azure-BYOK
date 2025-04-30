@@ -9,7 +9,7 @@ public class ImportEncryptedKeyRequest : EncryptedKeyRequestBase, IActionGroupsR
     /// <summary>
     /// The action groups that should be added to alert
     /// </summary>
-    public IEnumerable<string> ActionGroups { get; init; } = [];
+    public IEnumerable<string> ActionGroups { get; set; } = [];
 }
 
 /// <summary>

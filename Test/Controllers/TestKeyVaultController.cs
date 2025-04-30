@@ -3,12 +3,14 @@ using API.Controllers;
 using API.Models;
 using Azure;
 using Azure.ResourceManager.Monitor;
+using Azure.Security.KeyVault.Keys;
 using Infrastructure.Interfaces;
 using Infrastructure.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Test.TestHelpers;
 
 namespace Test.Controllers;
 
@@ -21,6 +23,7 @@ public class TestKeyVaultController
     private Mock<IKeyVaultService> _mockKeyVaultService;
     private Mock<IAlertService> _mockAlertService;
     private Mock<ISignatureService> _mockSignatureService;
+    private Mock<IKeyVaultManagementService> _mockKeyVaultManagementService;
 
     [SetUp]
     public void Setup()
@@ -32,13 +35,13 @@ public class TestKeyVaultController
         
         _mockKeyVaultService = new Mock<IKeyVaultService>();
         _mockAlertService = new Mock<IAlertService>();
-        var mockKeyVaultManagementService = new Mock<IKeyVaultManagementService>(); 
+        _mockKeyVaultManagementService = new Mock<IKeyVaultManagementService>(); 
         var mockTokenService = new Mock<ITokenService>();
         _mockSignatureService = new Mock<ISignatureService>();
         
         _keyVaultController = new KeyVaultController(_mockKeyVaultService.Object, 
             _mockAlertService.Object,
-            mockKeyVaultManagementService.Object,
+            _mockKeyVaultManagementService.Object,
             mockTokenService.Object,
             mockLoggerFactory.Object,
             _mockSignatureService.Object);
@@ -61,14 +64,10 @@ public class TestKeyVaultController
         Assert.That(result, Is.Not.Null);
         Assert.That(result, Is.InstanceOf<OkObjectResult>());
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals($"Creating a new key encryption key: {kekName}", o.ToString(), StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Information,
+            $"Creating a new key encryption key: {kekName}");
     }
 
     [Test]
@@ -91,16 +90,12 @@ public class TestKeyVaultController
         
         // Safe cast to ObjectResult
         var statusCodeResult = (ObjectResult) result;
-        Assert.That(statusCodeResult.StatusCode, Is.EqualTo(statusCode));    
+        Assert.That(statusCodeResult.StatusCode, Is.EqualTo(statusCode));   
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Azure failed to create new key encryption key")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogContains(
+            _mockLogger,
+            LogLevel.Error,
+            "Azure failed to create new key encryption key");
     }
     
     [Test]
@@ -123,14 +118,10 @@ public class TestKeyVaultController
         var statusCodeResult = (ObjectResult) result;
         Assert.That(statusCodeResult.StatusCode, Is.EqualTo(StatusCodes.Status500InternalServerError));
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals("An unexpected error occurred while creating a new key encryption key", o.ToString(), StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Error,
+            "An unexpected error occurred while creating a new key encryption key");
     }
 
     [Test]
@@ -139,17 +130,7 @@ public class TestKeyVaultController
         // Given a key vault controller
         SetupMocksForSuccessfulRequest();
         // When I ask to import a key
-        var uploadRequest = new ImportEncryptedKeyRequest
-        {
-            Name = "TestKey",
-            ActionGroups = ["TestActionGroup"],
-            KeyOperations = [],
-            TimeStamp = DateTime.UtcNow,
-            SignatureBase64 = "",
-            KeyEncryptionKeyId = "",
-            EncryptedKeyBase64 = "",
-
-        };
+        var uploadRequest = CreateImportEncryptedKeyRequest();
         
         var result = await _keyVaultController.ImportUserSpecifiedEncryptedKey(uploadRequest);
         
@@ -252,17 +233,7 @@ public class TestKeyVaultController
         // Override the standard configuration for error handling being tested
         _mockAlertService.Setup(mock => mock.CheckForKeyVaultAlertAsync()).ReturnsAsync(false);
         // When I ask to import a key
-        var uploadRequest = new ImportEncryptedKeyRequest
-        {
-            Name = "TestKey",
-            ActionGroups = ["TestActionGroup"],
-            KeyOperations = [],
-            TimeStamp = DateTime.UtcNow,
-            SignatureBase64 = "",
-            KeyEncryptionKeyId = "",
-            EncryptedKeyBase64 = "",
-
-        };
+        var uploadRequest = CreateImportEncryptedKeyRequest();
         
         var result = await _keyVaultController.ImportUserSpecifiedEncryptedKey(uploadRequest);
         // Then it should return a bad request result
@@ -273,14 +244,10 @@ public class TestKeyVaultController
         var statusCodeResult = (ObjectResult) result;
         Assert.That(statusCodeResult.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));    
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals(Constants.MissingKeyVaultAlert, o.ToString(), StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger, 
+            LogLevel.Warning, 
+            Constants.MissingKeyVaultAlert);
     }
     
     [Test]
@@ -289,17 +256,8 @@ public class TestKeyVaultController
         // Given a key vault controller
         SetupMocksForSuccessfulRequest();
         // When I ask to import a key
-        var uploadRequest = new ImportEncryptedKeyRequest
-        {
-            Name = "TestKey",
-            ActionGroups = [],
-            KeyOperations = [],
-            TimeStamp = DateTime.UtcNow,
-            SignatureBase64 = "",
-            KeyEncryptionKeyId = "",
-            EncryptedKeyBase64 = "",
-
-        };
+        var uploadRequest = CreateImportEncryptedKeyRequest();
+        uploadRequest.ActionGroups = [];
         
         var result = await _keyVaultController.ImportUserSpecifiedEncryptedKey(uploadRequest);
         // Then it should return a bad request result
@@ -310,14 +268,10 @@ public class TestKeyVaultController
         var statusCodeResult = (ObjectResult) result;
         Assert.That(statusCodeResult.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));    
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals(Constants.MissingActionGroup, o.ToString(), StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger, 
+            LogLevel.Warning, 
+            Constants.MissingActionGroup);
     }
     
     
@@ -327,18 +281,9 @@ public class TestKeyVaultController
         // Given a key vault controller
         SetupMocksForSuccessfulRequest();
         // When I ask to import a key
-        var uploadRequest = new ImportEncryptedKeyRequest
-        {
-            Name = "TestKey",
-            ActionGroups = ["TestActionGroup"],
-            KeyOperations = [],
-            TimeStamp = DateTime.UtcNow.AddDays(-11),
-            SignatureBase64 = "",
-            KeyEncryptionKeyId = "",
-            EncryptedKeyBase64 = "",
+        var uploadRequest = CreateImportEncryptedKeyRequest();
+        uploadRequest.TimeStamp = DateTime.UtcNow.AddMinutes(-11);
 
-        };
-        
         var result = await _keyVaultController.ImportUserSpecifiedEncryptedKey(uploadRequest);
         // Then it should return a bad request result
         Assert.That(result, Is.Not.Null);
@@ -348,14 +293,10 @@ public class TestKeyVaultController
         var statusCodeResult = (ObjectResult) result;
         Assert.That(statusCodeResult.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));    
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals(Constants.TheRequestIsNoLongerValid, o.ToString(), StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger, 
+            LogLevel.Warning, 
+            Constants.TheRequestIsNoLongerValid);
     }
 
     [Test]
@@ -364,17 +305,8 @@ public class TestKeyVaultController
         // Given a key vault controller
         SetupMocksForSuccessfulRequest();
         // When I ask to import a key
-        var uploadRequest = new ImportEncryptedKeyRequest
-        {
-            Name = "TestKey",
-            ActionGroups = ["TestActionGroup"],
-            KeyOperations = [],
-            TimeStamp = DateTime.UtcNow.AddDays(11),
-            SignatureBase64 = "",
-            KeyEncryptionKeyId = "",
-            EncryptedKeyBase64 = "",
-
-        };
+        var uploadRequest = CreateImportEncryptedKeyRequest();
+        uploadRequest.TimeStamp = DateTime.UtcNow.AddMinutes(11);
         
         var result = await _keyVaultController.ImportUserSpecifiedEncryptedKey(uploadRequest);
         // Then it should return a bad request result
@@ -385,14 +317,10 @@ public class TestKeyVaultController
         var statusCodeResult = (ObjectResult) result;
         Assert.That(statusCodeResult.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));    
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals(Constants.TheRequestIsNoLongerValid, o.ToString(), StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger, 
+            LogLevel.Warning, 
+            Constants.TheRequestIsNoLongerValid);
     }
     
     [Test]
@@ -406,17 +334,7 @@ public class TestKeyVaultController
         )).Returns(false);        
         
         // When I ask to import a key
-        var uploadRequest = new ImportEncryptedKeyRequest
-        {
-            Name = "TestKey",
-            ActionGroups = ["TestActionGroup"],
-            KeyOperations = [],
-            TimeStamp = DateTime.UtcNow,
-            SignatureBase64 = "",
-            KeyEncryptionKeyId = "",
-            EncryptedKeyBase64 = "",
-
-        };
+        var uploadRequest = CreateImportEncryptedKeyRequest();
         
         var result = await _keyVaultController.ImportUserSpecifiedEncryptedKey(uploadRequest);
         // Then it should return a bad request result
@@ -427,14 +345,10 @@ public class TestKeyVaultController
         var statusCodeResult = (ObjectResult) result;
         Assert.That(statusCodeResult.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));    
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals(Constants.InvalidSignatureErrorMessage, o.ToString(), StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger, 
+            LogLevel.Warning, 
+            Constants.InvalidSignatureErrorMessage);
     }
     
     [Test]
@@ -451,17 +365,7 @@ public class TestKeyVaultController
             .ThrowsAsync(new RequestFailedException(statusCode, errorCode));
         
         // When I ask to import a key
-        var uploadRequest = new ImportEncryptedKeyRequest
-        {
-            Name = "TestKey",
-            ActionGroups = [actionGroupName],
-            KeyOperations = [],
-            TimeStamp = DateTime.UtcNow,
-            SignatureBase64 = "",
-            KeyEncryptionKeyId = "",
-            EncryptedKeyBase64 = "",
-
-        };
+        var uploadRequest = CreateImportEncryptedKeyRequest();
         
         var result = await _keyVaultController.ImportUserSpecifiedEncryptedKey(uploadRequest);
         // Then it should return a bad request result
@@ -472,14 +376,10 @@ public class TestKeyVaultController
         var statusCodeResult = (ObjectResult) result;
         Assert.That(statusCodeResult.StatusCode, Is.EqualTo(statusCode));    
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"Azure failed to get the action group {actionGroupName}")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogContains(
+            _mockLogger, 
+            LogLevel.Error, 
+            $"Azure failed to get the action group {actionGroupName}");
     }
     
     [Test]
@@ -495,17 +395,7 @@ public class TestKeyVaultController
             .ThrowsAsync(new Exception("Something went wrong"));
         
         // When I ask to import a key
-        var uploadRequest = new ImportEncryptedKeyRequest
-        {
-            Name = "TestKey",
-            ActionGroups = [actionGroupName],
-            KeyOperations = [],
-            TimeStamp = DateTime.UtcNow,
-            SignatureBase64 = "",
-            KeyEncryptionKeyId = "",
-            EncryptedKeyBase64 = "",
-
-        };
+        var uploadRequest = CreateImportEncryptedKeyRequest();
         
         var result = await _keyVaultController.ImportUserSpecifiedEncryptedKey(uploadRequest);
         // Then it should return a bad request result
@@ -516,14 +406,10 @@ public class TestKeyVaultController
         var statusCodeResult = (ObjectResult) result;
         Assert.That(statusCodeResult.StatusCode, Is.EqualTo(statusCode));    
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals($"An unexpected error occurred while checking if the action group {actionGroupName} exists", o.ToString(), StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Error,
+            $"An unexpected error occurred while checking if the action group {actionGroupName} exists");
     }
     
     [Test]
@@ -542,17 +428,7 @@ public class TestKeyVaultController
             .ReturnsAsync(mockActionGroupResource.Object);
         
         // When I ask to import a key
-        var uploadRequest = new ImportEncryptedKeyRequest
-        {
-            Name = "TestKey",
-            ActionGroups = [actionGroupName],
-            KeyOperations = [],
-            TimeStamp = DateTime.UtcNow,
-            SignatureBase64 = "",
-            KeyEncryptionKeyId = "",
-            EncryptedKeyBase64 = "",
-
-        };
+        var uploadRequest = CreateImportEncryptedKeyRequest();
         
         var result = await _keyVaultController.ImportUserSpecifiedEncryptedKey(uploadRequest);
         // Then it should return a bad request result
@@ -563,14 +439,10 @@ public class TestKeyVaultController
         var statusCodeResult = (ObjectResult) result;
         Assert.That(statusCodeResult.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));    
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals($"The action group {actionGroupName} does not exist", o.ToString(), StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Error,
+            $"The action group {actionGroupName} does not exist");
     }
     
     [Test]
@@ -588,17 +460,7 @@ public class TestKeyVaultController
         
         // When I ask to import a key
         const string keyName = "TestKey";
-        var uploadRequest = new ImportEncryptedKeyRequest
-        {
-            Name = keyName,
-            ActionGroups = ["actionGroupName"],
-            KeyOperations = [],
-            TimeStamp = DateTime.UtcNow,
-            SignatureBase64 = "",
-            KeyEncryptionKeyId = "",
-            EncryptedKeyBase64 = "",
-
-        };
+        var uploadRequest = CreateImportEncryptedKeyRequest();
         
         var result = await _keyVaultController.ImportUserSpecifiedEncryptedKey(uploadRequest);
         // Then it should return a bad request result
@@ -609,23 +471,15 @@ public class TestKeyVaultController
         var statusCodeResult = (ObjectResult) result;
         Assert.That(statusCodeResult.StatusCode, Is.EqualTo(StatusCodes.Status500InternalServerError));    
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals($"An unexpected error occurred when creating a key alert for the key {keyName}", o.ToString(), StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-        
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals($"The key {keyName} was deleted because the alert could not be created", o.ToString(), StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger, 
+            LogLevel.Error, 
+            $"An unexpected error occurred when creating a key alert for the key {keyName}");
+    
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger, 
+            LogLevel.Warning, 
+            $"The key {keyName} was deleted because the alert could not be created");
         
         _mockKeyVaultService.Verify(mock => mock.DeleteKeyAsync(keyName), Times.Once);
     }
@@ -641,17 +495,7 @@ public class TestKeyVaultController
         )).Throws(new Exception("Something went wrong"));        
         
         // When I ask to import a key
-        var uploadRequest = new ImportEncryptedKeyRequest
-        {
-            Name = "TestKey",
-            ActionGroups = ["TestActionGroup"],
-            KeyOperations = [],
-            TimeStamp = DateTime.UtcNow,
-            SignatureBase64 = "",
-            KeyEncryptionKeyId = "",
-            EncryptedKeyBase64 = "",
-
-        };
+        var uploadRequest = CreateImportEncryptedKeyRequest();
         
         var result = await _keyVaultController.ImportUserSpecifiedEncryptedKey(uploadRequest);
         // Then it should return a bad request result
@@ -662,15 +506,187 @@ public class TestKeyVaultController
         var statusCodeResult = (ObjectResult) result;
         Assert.That(statusCodeResult.StatusCode, Is.EqualTo(StatusCodes.Status500InternalServerError));    
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("There was an error while checking the signature:")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogContains(
+            _mockLogger, 
+            LogLevel.Error, 
+            "There was an error while checking the signature:");
     }
+
+    [Test]
+    public async Task ShouldCorrectKeyDeleteReturnOk()
+    {
+        // Given a key vault controller
+        var mockDeletedKey = new Mock<IDeletedKeyWrapper>();
+        _mockKeyVaultService.Setup(mock => mock.DeleteKeyAsync(It.IsAny<string>()))
+            .ReturnsAsync(mockDeletedKey.Object);
+        // When I ask to delete a key
+        const string keyName = "TestKey";
+        var result = await _keyVaultController.DeleteKey(keyName);
+        // Then it should be OK
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result, Is.InstanceOf<OkObjectResult>());
+        
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Information,
+            $"Deleting the key {keyName}");
+    }
+
+    [Test]
+    public async Task ShouldFailedKeyDeleteReturnErrorMessageWhenInternalServerErrorOccurs()
+    {
+        // Given a key vault controller
+        _mockKeyVaultService.Setup(mock => mock.DeleteKeyAsync(It.IsAny<string>()))
+            .ThrowsAsync(new Exception("Something went wrong"));
+        // When I ask to delete a key
+        const string keyName = "TestKey";
+        var result = await _keyVaultController.DeleteKey(keyName);
+        // Then it should be OK
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        
+        var statusCodeResult = (ObjectResult) result;
+        Assert.That(statusCodeResult.StatusCode, Is.EqualTo(StatusCodes.Status500InternalServerError));
+        
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Information,
+            $"Deleting the key {keyName}");
+        
+        MockLoggerTestHelper.VerifyLogContains(
+            _mockLogger,
+            LogLevel.Error,
+            $"An unexpected error occurred while deleting the key {keyName}");
+    }
+    
+    [Test]
+    public async Task ShouldFailedKeyDeleteReturnErrorMessageWhenAzureErrorOccurs()
+    {
+        // Given a key vault controller
+        const int expectedStatusCode = StatusCodes.Status400BadRequest;
+        _mockKeyVaultService.Setup(mock => mock.DeleteKeyAsync(It.IsAny<string>()))
+            .ThrowsAsync(new RequestFailedException(expectedStatusCode, "Error"));
+        // When I ask to delete a key
+        const string keyName = "TestKey";
+        var result = await _keyVaultController.DeleteKey(keyName);
+        // Then it should be OK
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        
+        var statusCodeResult = (ObjectResult) result;
+        Assert.That(statusCodeResult.StatusCode, Is.EqualTo(expectedStatusCode));
+        
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Information,
+            $"Deleting the key {keyName}");
+        
+        MockLoggerTestHelper.VerifyLogContains(
+            _mockLogger,
+            LogLevel.Error,
+            $"Azure failed to delete the key {keyName}:");
+    }
+    
+    [Test]
+    public async Task ShouldSuccessfulRecoverReturnOk()
+    {
+        // Given a key vault controller
+        var mockDeletedKey = new Mock<RecoverDeletedKeyOperation>();
+        _mockKeyVaultService.Setup(mock => mock.RecoverDeletedKeyAsync(It.IsAny<string>()))
+            .ReturnsAsync(mockDeletedKey.Object);
+        
+        _mockKeyVaultManagementService.Setup(mock => mock.DoesKeyVaultHaveSoftDeleteEnabled())
+            .Returns(true);
+        
+        // When I ask to delete a key
+        const string keyName = "TestKey";
+        var result = await _keyVaultController.RecoverDeletedKey(keyName);
+        
+        // Then it should be OK
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result, Is.InstanceOf<OkObjectResult>());
+        
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Information,
+            $"Recovering the deleted key {keyName}");
+    }
+    
+    [Test]
+    public async Task ShouldReturnBadRequestWhenSoftDeleteIsNotEnabled()
+    {
+        // Given a key vault controller
+        var mockDeletedKey = new Mock<RecoverDeletedKeyOperation>();
+        _mockKeyVaultService.Setup(mock => mock.RecoverDeletedKeyAsync(It.IsAny<string>()))
+            .ReturnsAsync(mockDeletedKey.Object);
+        
+        _mockKeyVaultManagementService.Setup(mock => mock.DoesKeyVaultHaveSoftDeleteEnabled())
+            .Returns(false);
+        
+        // When I ask to delete a key
+        const string keyName = "TestKey";
+        var result = await _keyVaultController.RecoverDeletedKey(keyName);
+        
+        // Then it should be OK
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());
+        
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Warning,
+            Constants.SoftDeleteErrorMessage);
+    }
+    
+     [Test]
+    public async Task ShouldSuccessfulPurgeReturnOk()
+    {
+        // Given a key vault controller
+        var mockDeletedKey = new Mock<Response>();
+        _mockKeyVaultService.Setup(mock => mock.PurgeDeletedKeyAsync(It.IsAny<string>()))
+            .ReturnsAsync(mockDeletedKey.Object);
+        
+        _mockKeyVaultManagementService.Setup(mock => mock.DoesKeyVaultHavePurgeProtection())
+            .Returns(false);
+        
+        // When I ask to delete a key
+        const string keyName = "TestKey";
+        var result = await _keyVaultController.PurgeDeletedKey(keyName);
+        
+        // Then it should be OK
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result, Is.InstanceOf<StatusCodeResult>());
+        
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Information,
+            $"Purging the deleted key {keyName}");
+    }
+    
+    [Test]
+    public async Task ShouldReturnBadRequestWhenPurgeProtectionIsEnabled()
+    {
+        // Given a key vault controller
+        var mockDeletedKey = new Mock<RecoverDeletedKeyOperation>();
+        _mockKeyVaultService.Setup(mock => mock.RecoverDeletedKeyAsync(It.IsAny<string>()))
+            .ReturnsAsync(mockDeletedKey.Object);
+        
+        _mockKeyVaultManagementService.Setup(mock => mock.DoesKeyVaultHavePurgeProtection())
+            .Returns(true);
+        
+        // When I ask to delete a key
+        const string keyName = "TestKey";
+        var result = await _keyVaultController.PurgeDeletedKey(keyName);
+        
+        // Then it should be OK
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());
+        
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Warning,
+            $"Cannot purge key {keyName} because purge protection is enabled on the vault");
+    }
+
     
     [TearDown]
     public void TearDownController()
@@ -678,7 +694,22 @@ public class TestKeyVaultController
         _keyVaultController.Dispose();
     }
     
-    // Helper to setup mocks
+    // Helper to set up mocks and create objects
+    private static ImportEncryptedKeyRequest CreateImportEncryptedKeyRequest() 
+    {
+        return new ImportEncryptedKeyRequest
+        {
+            Name = "TestKey",
+            ActionGroups = ["TestActionGroup"],
+            KeyOperations = [],
+            TimeStamp = DateTime.UtcNow,
+            SignatureBase64 = "",
+            KeyEncryptionKeyId = "",
+            EncryptedKeyBase64 = "",
+
+        };
+    }
+    
     private void SetupMocksForSuccessfulRequest()
     {
         // Mock of the alert service dependency

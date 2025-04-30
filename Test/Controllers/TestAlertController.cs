@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Test.TestHelpers;
 using Is = NUnit.Framework.Is;
 
 namespace Test.Controllers;
@@ -47,14 +48,10 @@ public class TestAlertController
         Assert.That(actionGroup, Is.Not.Null);
         Assert.That(actionGroup, Is.InstanceOf<OkObjectResult>());
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals($"Getting action group {actionGroupName}", o.ToString(), StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger, 
+            LogLevel.Information,
+            $"Getting action group {actionGroupName}");
     }
 
     [Test]
@@ -79,14 +76,10 @@ public class TestAlertController
         var statusCodeResult = (ObjectResult) result;
         Assert.That(statusCodeResult.StatusCode, Is.EqualTo(statusCode));
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"Azure failed to get action group {groupName}")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        MockLoggerTestHelper.VerifyLogContains(
+            _mockLogger, 
+            LogLevel.Error,
+            $"Azure failed to get action group {groupName}");
     }
     
     [Test]
@@ -109,14 +102,10 @@ public class TestAlertController
         var statusCodeResult = (ObjectResult) result;
         Assert.That(statusCodeResult.StatusCode, Is.EqualTo(StatusCodes.Status500InternalServerError));
         
-        _mockLogger.Verify(
-            x => x.Log(
+        MockLoggerTestHelper.VerifyLogContains(
+                _mockLogger,
                 LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"An unexpected error occured when getting action group {groupName}")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+                $"An unexpected error occured when getting action group {groupName}");
     }
 
     [TearDown]

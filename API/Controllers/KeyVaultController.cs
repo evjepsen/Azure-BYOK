@@ -197,8 +197,8 @@ public class KeyVaultController : Controller
             var doesKeyVaultHavePurgeProtection = _keyVaultManagementService.DoesKeyVaultHavePurgeProtection();
             if (doesKeyVaultHavePurgeProtection)
             {
-                _logger.LogWarning("Cannot delete key {keyName} because purge protection is enabled on the vault", keyName);
-                return BadRequest("Purge protection is enabled on your vault");
+                _logger.LogWarning("Cannot purge key {keyName} because purge protection is enabled on the vault", keyName);
+                return BadRequest($"Cannot purge key {keyName} because purge protection is enabled on the vault");
             }
             
             // Try to complete the purge operation
@@ -241,7 +241,8 @@ public class KeyVaultController : Controller
             var doesKeyVaultHaveSoftDelete = _keyVaultManagementService.DoesKeyVaultHaveSoftDeleteEnabled();
             if (!doesKeyVaultHaveSoftDelete)
             {
-                return BadRequest("The key vault is not enabled for soft delete");
+                _logger.LogWarning(Constants.SoftDeleteErrorMessage);
+                return BadRequest(Constants.SoftDeleteErrorMessage);
             }
             _logger.LogInformation("Recovering the deleted key {kekName}", kekName);
             var response = await _keyVaultService.RecoverDeletedKeyAsync(kekName);
