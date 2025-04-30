@@ -226,6 +226,86 @@ public class TestKeyVaultController
     }
     
     [Test]
+    public async Task ShouldRotateEncryptedKeyRequestReturnBadRequestWhenKeyDoesNotExists()
+    {
+        // Given a key vault controller
+        SetupMocksForSuccessfulRequest();
+        
+        _mockKeyVaultService.Setup(mock => mock.CheckIfKeyExistsAsync(It.IsAny<string>()))
+            .ReturnsAsync(false);
+        
+        // When I ask to import a key
+        const string keyName = "testKey";
+        var rotateRequest = new RotateEncryptedKeyRequest
+        {
+            Name = keyName,
+            KeyOperations = [],
+            TimeStamp = DateTime.UtcNow,
+            SignatureBase64 = "",
+            KeyEncryptionKeyId = "",
+            EncryptedKeyBase64 = ""
+        };
+        
+        var result = await _keyVaultController.RotateKeyUsingNewEncryptedKey(rotateRequest);
+        
+        // Then it should return an Ok result
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        
+        // Safe cast to ObjectResult
+        var statusCodeResult = (ObjectResult) result;
+        Assert.That(statusCodeResult.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Warning,
+            $"The key {keyName} does not exist");
+    }
+    
+    [Test]
+    public async Task ShouldRotateEncryptedKeyRequestReturnBadRequestWhenKeyOperationsAreNotValid()
+    {
+        // Given a key vault controller
+        SetupMocksForSuccessfulRequest();
+
+        const string errorMessage = "Error";
+        var fakeResult = new KeyOperationsValidationResult
+        {
+            IsValid = false,
+            ErrorMessage = errorMessage
+        };
+
+        _mockKeyVaultService.Setup(mock => mock.ValidateKeyOperations(It.IsAny<string[]>()))
+            .Returns(fakeResult);
+        
+        // When I ask to import a key
+        var rotateRequest = new RotateEncryptedKeyRequest
+        {
+            Name = "testKey",
+            KeyOperations = [],
+            TimeStamp = DateTime.UtcNow,
+            SignatureBase64 = "",
+            KeyEncryptionKeyId = "",
+            EncryptedKeyBase64 = ""
+        };
+        
+        var result = await _keyVaultController.RotateKeyUsingNewEncryptedKey(rotateRequest);
+        
+        // Then it should return an Ok result
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        
+        // Safe cast to ObjectResult
+        var statusCodeResult = (ObjectResult) result;
+        Assert.That(statusCodeResult.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Warning,
+            errorMessage);
+    }
+    
+    [Test]
     public async Task ShouldRequestWhereNoKeyVaultAlertReturnBadRequest()
     {
         // Given a key vault controller

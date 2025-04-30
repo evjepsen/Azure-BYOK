@@ -96,8 +96,8 @@ public class KeyVaultController : Controller
         // Check that the request (ImportEncryptedKeyRequest) object is valid
         if (!ModelState.IsValid)
         {
-            _logger.LogWarning("The upload request could not be completed - the request body is invalid");
-            return BadRequest("The request body is invalid (Properly JSON formatting error)");
+            _logger.LogWarning(Constants.InvalidInputForRequest);
+            return BadRequest(Constants.InvalidInputForRequest);
         }
 
         // Check that the request is valid
@@ -130,8 +130,8 @@ public class KeyVaultController : Controller
         // Check that the request (ImportKeyBlobRequest) object is valid
         if (!ModelState.IsValid)
         {
-            _logger.LogWarning("The upload request could not be completed - the request body is invalid");
-            return BadRequest("The request body is invalid (Properly JSON formatting error)");
+            _logger.LogWarning(Constants.InvalidInputForRequest);
+            return BadRequest(Constants.InvalidInputForRequest);
         }
         
         // Check that the request is valid
@@ -275,8 +275,8 @@ public class KeyVaultController : Controller
         // Check that the request (RotateEncryptedKeyRequest) object is valid
         if (!ModelState.IsValid)
         {
-            _logger.LogWarning("The upload request could not be completed - the request body is invalid");
-            return BadRequest("The request body is invalid (Properly JSON formatting error)");
+            _logger.LogWarning(Constants.InvalidInputForRequest);
+            return BadRequest(Constants.InvalidInputForRequest);
         }
         
         // Specify the strategy
@@ -300,8 +300,8 @@ public class KeyVaultController : Controller
         // Check that the request (RotateEncryptedKeyRequest) object is valid
         if (!ModelState.IsValid)
         {
-            _logger.LogWarning("The upload request could not be completed - the request body is invalid");
-            return BadRequest("The request body is invalid (Properly JSON formatting error)");
+            _logger.LogWarning(Constants.InvalidInputForRequest);
+            return BadRequest(Constants.InvalidInputForRequest);
         }
         
         // Specify the strategy
@@ -461,6 +461,7 @@ public class KeyVaultController : Controller
 
             if (!keyOperationsValidationResult.IsValid)
             {
+                _logger.LogWarning(keyOperationsValidationResult.ErrorMessage);
                 return BadRequest(keyOperationsValidationResult.ErrorMessage);
             }
             

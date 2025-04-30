@@ -40,5 +40,11 @@ public static class Constants
     /// </summary>
     public const string InternalServerErrorOccuredWhenGettingRoleAssignments =
         "An unexpected error occured when getting the role assignments";
-
+    
+    /// <summary>
+    /// The user has given incorrect input
+    /// </summary>
+    public const string InvalidInputForRequest = "The request could not be completed - the request body is invalid (Properly JSON formatting error)";
+    
+    
 }
