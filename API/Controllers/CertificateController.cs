@@ -1,5 +1,7 @@
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Azure;
+using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -71,7 +73,13 @@ public class CertificateController : Controller
             
             if (certificate.NotAfter < DateTime.UtcNow)
             {
-                return BadRequest("Certificate has expired");
+                _logger.LogError(Constants.CertificateHasExpired);
+                return BadRequest(Constants.CertificateHasExpired);
+            }
+            if (DateTime.UtcNow < certificate.NotBefore)
+            {
+                _logger.LogError(Constants.CertificateNotYetValid);
+                return BadRequest(Constants.CertificateNotYetValid);
             }
         }
         catch (Exception e)
@@ -87,8 +95,8 @@ public class CertificateController : Controller
         }
         catch (InvalidOperationException)
         {
-            _logger.LogError("Certificate was not valid");
-            return BadRequest("Certificate was not valid");
+            _logger.LogError(Constants.CertificateIsInvalid);
+            return BadRequest(Constants.CertificateIsInvalid);
         }
         catch (Exception e)
         {
@@ -96,7 +104,8 @@ public class CertificateController : Controller
             return BadRequest("Error adding the certificate to the cache");
         }
         
-        return Ok("The certificate was uploaded successfully");
+        _logger.LogInformation(Constants.CertificateWasUploadedSuccessfully);
+        return Ok(Constants.CertificateWasUploadedSuccessfully);
     }
 
     /// <summary>
@@ -110,10 +119,14 @@ public class CertificateController : Controller
     {
         try
         {
-            var azureCertificate = await _signatureService.GetAzureSigningCertificate();
-            var certificate = new X509Certificate2(azureCertificate.Cer);
-            var certificateAsPem = certificate.ExportCertificatePem();
+            var certificateAsPem = await _signatureService.GetKeyVaultCertificateAsX509PemString();
+            _logger.LogInformation("Certificate was converted to PEM successfully");
             return Ok(certificateAsPem);
+        }
+        catch (CryptographicException)
+        {
+            _logger.LogError("Certificate was cryptographically invalid");
+            return StatusCode(StatusCodes.Status500InternalServerError, "Certificate was cryptographically invalid");
         }
         catch (RequestFailedException e)
         {
