@@ -113,7 +113,7 @@ public class TestSignatureService
         var kekSignedResponse = await _keyVaultService.GenerateKekAsync(kekName);
         
         var kek = kekSignedResponse.Kek;
-        var kekMarshaled = TokenHelper.SerializeObjectForAzureSignature(kek); ;
+        var kekMarshaled = TokenHelper.SerializeObjectForAzureSignature(kek); 
         var pem = kekSignedResponse.PemString;
         var kekAndPem = Encoding.UTF8.GetBytes(kekMarshaled + pem);
         

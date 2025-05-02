@@ -206,10 +206,6 @@ public class TestCertificateController
         Assert.That(result, Is.Not.Null);
         Assert.That(result, Is.InstanceOf<OkObjectResult>());
         
-        var gotStatusCode = (ObjectResult) result; // safe cast status code
-        // and the status code should be 200
-        Assert.That(gotStatusCode.StatusCode, Is.EqualTo(StatusCodes.Status200OK));
-        
         // and the logger should log an information message
         MockLoggerTestHelper.VerifyLogEntry(
             _mockLogger,
@@ -221,7 +217,7 @@ public class TestCertificateController
     /// Tests for the GetAzureSigningCertificate method in the CertificateController
     /// </summary>
     [Test]
-    public async Task ShouldGetAzureSigningCertificateWhenFoundReturnOk()
+    public async Task ShouldGetOkWhenAzureCertificateCanBeFound()
     {
         _mockSignatureService.Setup(mockSignatureService =>
                 mockSignatureService.GetKeyVaultCertificateAsX509PemString())
@@ -272,7 +268,7 @@ public class TestCertificateController
 
 
     [Test]
-    public async Task ShouldNotRetrievingCertificateFromAzureReturnBadRequest()
+    public async Task ShouldNotBeingAbleToRetrieveCertificateFromAzureReturnBadRequest()
     {
         const int status = StatusCodes.Status404NotFound;
         _mockSignatureService.Setup(mockSignatureService =>
