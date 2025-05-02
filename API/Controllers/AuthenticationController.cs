@@ -38,7 +38,7 @@ public class AuthenticationController : Controller
         
         // Valid email addresses
         _validEmails = applicationOptions.Value.AllowedEmails;
-
+    
     }
     
     /// <summary>
