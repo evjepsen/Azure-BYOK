@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using Azure.Core;
+using Azure;
 using Azure.Core.Pipeline;
 using Azure.Identity;
 using Azure.Security.KeyVault.Certificates;
@@ -124,14 +124,25 @@ public class SignatureService : ISignatureService
 
     public async Task<KeyVaultCertificateWithPolicy> GetAzureSigningCertificate()
     {
+        _logger.LogInformation("Getting signing certificate from key vault");
         var certWithPolicy = await _client.GetCertificateAsync(_applicationOptions.SigningCertificateName);
-
         if (!certWithPolicy.HasValue)
         {
-            throw new InvalidOperationException("No certificate was found.");
+            _logger.LogError("Certificate not found in key vault");
+            throw new RequestFailedException("No certificate was found.");
         }
         
+        _logger.LogInformation("Certificate was retrieved from key vault");
         return certWithPolicy.Value;
+    }
+
+    public async Task<string> GetKeyVaultCertificateAsX509PemString()
+    {
+        var azureCertificate = await GetAzureSigningCertificate();
+        var certificate = new X509Certificate2(azureCertificate.Cer);
+        var certificateAsPem = certificate.ExportCertificatePem();
+        _logger.LogInformation("Converted certificate to PEM");
+        return certificateAsPem;
     }
 
     // Helper method to get the digest

@@ -50,7 +50,7 @@ public class CertificateCache : ICertificateCache
         _logger.LogInformation("Validating the certificate");
         if (DateTime.Now > certificate.NotAfter || DateTime.Now < certificate.NotBefore)
         {
-            _logger.LogInformation("The certificate is expired");
+            _logger.LogInformation("The certificate is expired or not yet valid");
             return false;
         }
         

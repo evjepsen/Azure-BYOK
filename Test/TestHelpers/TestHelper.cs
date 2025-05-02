@@ -1,8 +1,12 @@
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Azure.Security.KeyVault.Certificates;
 using Infrastructure.Options;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Moq;
 
 namespace Test.TestHelpers;
 
@@ -45,5 +49,28 @@ public static class TestHelper
         var dataBytes = System.Text.Encoding.UTF8.GetBytes(data);
         var signature = key.SignData(dataBytes, HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1);
         return (Convert.ToBase64String(signature), dataBytes);
+    }
+    
+    /// <summary>
+    /// Helper method to create a fake IFormFile with a self-signed certificate
+    /// </summary>
+    /// <param name="notBefore">DateTime of start of validity</param>
+    /// <param name="notAfter">DateTime of expiration</param>
+    /// <returns>A Fake IFormFile containing a test certificate</returns>
+    public static IFormFile CreateCertTestFile(DateTime notBefore, DateTime notAfter)
+    {
+        // create a self-signed certificate, in pem format
+        using var rsa = RSA.Create(2048);
+        var request = new CertificateRequest("CN=Test", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var cert = request.CreateSelfSigned(notBefore,notAfter);
+        var certData = cert.Export(X509ContentType.Pfx);
+        var certFile = new Mock<IFormFile>();
+        certFile.Setup(f => f.Length).Returns(certData.Length);
+        var stream = new MemoryStream(certData);
+        certFile.Setup(f => f.OpenReadStream()).Returns(stream);
+        certFile.Setup(f => f.CopyToAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+            .Callback<Stream, CancellationToken>((s, c) => stream.CopyTo(s));
+        
+        return certFile.Object;
     }
 }

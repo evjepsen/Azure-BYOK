@@ -113,7 +113,7 @@ public class TestSignatureService
         var kekSignedResponse = await _keyVaultService.GenerateKekAsync(kekName);
         
         var kek = kekSignedResponse.Kek;
-        var kekMarshaled = TokenHelper.SerializeObjectForAzureSignature(kek); ;
+        var kekMarshaled = TokenHelper.SerializeObjectForAzureSignature(kek); 
         var pem = kekSignedResponse.PemString;
         var kekAndPem = Encoding.UTF8.GetBytes(kekMarshaled + pem);
         
@@ -136,5 +136,20 @@ public class TestSignatureService
         var cert = await _signatureService.GetAzureSigningCertificate();
         // Then it should be there
         Assert.That(cert, Is.Not.Null);
+    }
+    
+    [Test]
+    public async Task ShouldBeAbleToConvertKeyVaultCertificateToPemString()
+    {
+        
+        // Given a certificate in the key vault
+        // When I ask to convert the certificate to a PEM string
+        var pemString = await _signatureService.GetKeyVaultCertificateAsX509PemString();
+        
+        // Then it should not be null
+        Assert.That(pemString, Is.Not.Null);
+        // and it should be a valid PEM string 
+        Assert.That(pemString, Does.StartWith("-----BEGIN CERTIFICATE-----"));
+        Assert.That(pemString, Does.EndWith("-----END CERTIFICATE-----"));
     }
 }
