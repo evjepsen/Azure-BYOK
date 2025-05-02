@@ -138,20 +138,11 @@ public class SignatureService : ISignatureService
 
     public async Task<string> GetKeyVaultCertificateAsX509PemString()
     {
-        try
-        {
-            var azureCertificate = await GetAzureSigningCertificate();
-            var certificate = new X509Certificate2(azureCertificate.Cer);
-            var certificateAsPem = certificate.ExportCertificatePem();
-            _logger.LogInformation("Converted certificate to PEM");
-            return certificateAsPem;
-
-        }
-        catch (CryptographicException e)
-        {
-            _logger.LogError("Could not convert certificate to PEM. Failed with error: {error}", e.Message);
-            throw;
-        }
+        var azureCertificate = await GetAzureSigningCertificate();
+        var certificate = new X509Certificate2(azureCertificate.Cer);
+        var certificateAsPem = certificate.ExportCertificatePem();
+        _logger.LogInformation("Converted certificate to PEM");
+        return certificateAsPem;
     }
 
     // Helper method to get the digest
