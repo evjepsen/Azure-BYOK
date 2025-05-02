@@ -1,12 +1,11 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using Azure.Core;
+using Azure;
 using Azure.Core.Pipeline;
 using Azure.Identity;
 using Azure.Security.KeyVault.Certificates;
 using Azure.Security.KeyVault.Keys.Cryptography;
-using Infrastructure.Exceptions;
 using Infrastructure.Interfaces;
 using Infrastructure.Options;
 using Microsoft.Extensions.Logging;
@@ -130,7 +129,7 @@ public class SignatureService : ISignatureService
         if (!certWithPolicy.HasValue)
         {
             _logger.LogError("Certificate not found in key vault");
-            throw new ResourceNotFoundException("No certificate was found.");
+            throw new RequestFailedException("No certificate was found.");
         }
         
         _logger.LogInformation("Certificate was retrieved from key vault");

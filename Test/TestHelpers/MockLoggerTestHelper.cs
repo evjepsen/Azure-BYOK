@@ -5,8 +5,10 @@ namespace Test.TestHelpers;
 
 public static class MockLoggerTestHelper
 {
-    public static void VerifyLogEntry<T>(Mock<ILogger<T>> logger, LogLevel logLevel, string message)
+    public static void VerifyLogEntry<T>(Mock<ILogger<T>> logger, LogLevel logLevel, string message, Times times = default)
     {
+        times = times == default ? Times.Once() : times;
+
         logger.Verify(
             x => x.Log(
                 logLevel,
@@ -14,7 +16,7 @@ public static class MockLoggerTestHelper
                 It.Is<It.IsAnyType>((o, t) => string.Equals(message, o.ToString(), StringComparison.InvariantCultureIgnoreCase)),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            times);
     }
     
     public static void VerifyLogContains<T>(Mock<ILogger<T>> logger, LogLevel logLevel, string partialMessage)

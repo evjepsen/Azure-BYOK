@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using API;
 using API.Controllers;
-using Azure.Security.KeyVault.Certificates;
-using Infrastructure.Exceptions;
+using Azure;
 using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -56,27 +56,20 @@ public class TestCertificateController
         Assert.That(gotStatusCode.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         
         // and the logger should log an error
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate file is null or empty.", o.ToString(),
-                    StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once
-        );
-
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Error,
+            "Certificate file is null or empty.");
     }
 
     [Test]
     public async Task ShouldInvalidMemoryStreamReturnBadRequest()
     {
-       // given an certificate file
+       // given a certificate file
         var certificateFile = new Mock<IFormFile>();
         // with length of 1
         certificateFile.Setup(f => f.Length).Returns(1);
-        // and an that cannot copied to memory stream
+        // and that cannot copy to memory stream
         certificateFile.Setup(f => f.CopyToAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Error reading certificate file"));
         
@@ -92,23 +85,17 @@ public class TestCertificateController
         Assert.That(gotStatusCode.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         
         // and the logger should log an error since the file could not be read
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals("Error reading certificate file: Error reading certificate file", o.ToString(),
-                    StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once
-        );
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Error,
+            "Error reading certificate file: Error reading certificate file");
     }
     
     [Test]
     public async Task ShouldExpiredCertificateReturnBadRequest()
     {
 
-        // Given a expired certificate file as IFormFile
+        // Given an expired certificate file as IFormFile
         var notBefore = DateTime.UtcNow.AddDays(-2);
         var notAfter = DateTime.UtcNow.AddDays(-1);
         var fakeIForm = TestHelper.CreateCertTestFile(notBefore, notAfter);
@@ -126,27 +113,17 @@ public class TestCertificateController
         Assert.That(gotStatusCode.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         
         // and the logger should log an error
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate has expired", o.ToString(),
-                    StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once
-        );
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Error,
+            Constants.CertificateHasExpired);
+        
         // However, the logger should not log the exception
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate is not yet valid", o.ToString(),
-                    StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never
-        );
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Error,
+            Constants.CertificateNotYetValid,
+            Times.Never()); 
     }
     
     [Test]
@@ -169,28 +146,18 @@ public class TestCertificateController
         // and the status code should be 400
         Assert.That(gotStatusCode.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         
-        // and the logger not should the expired error
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate has expired", o.ToString(),
-                    StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never
-        );
+        // and the logger should not log the expired error
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Error,
+            Constants.CertificateHasExpired,
+            Times.Never());
+        
         // However, it should log the not yet valid error
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate is not yet valid", o.ToString(),
-                    StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once
-        );
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Error,
+            Constants.CertificateNotYetValid);
     }
     
     [Test]
@@ -218,16 +185,10 @@ public class TestCertificateController
         Assert.That(gotStatusCode.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         
         // and the logger should log an error
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate was not valid", o.ToString(),
-                    StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once
-        );
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Error,
+            Constants.CertificateIsInvalid);
     }
 
     [Test]
@@ -250,16 +211,10 @@ public class TestCertificateController
         Assert.That(gotStatusCode.StatusCode, Is.EqualTo(StatusCodes.Status200OK));
         
         // and the logger should log an information message
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate was uploaded successfully", o.ToString(),
-                    StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once
-        );
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Information,
+            "Certificate was uploaded successfully");
     }
 
     /// <summary>
@@ -283,16 +238,10 @@ public class TestCertificateController
         // and the status code should be 200
         Assert.That(gotStatusCode.StatusCode, Is.EqualTo(StatusCodes.Status200OK));
         
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate was converted to PEM successfully", o.ToString(),
-                    StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once
-        );
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Information,
+            "Certificate was converted to PEM successfully");
     }
 
     [Test]
@@ -314,16 +263,10 @@ public class TestCertificateController
         Assert.That(gotStatusCode.StatusCode, Is.EqualTo(StatusCodes.Status500InternalServerError));
    
         // but the logger should log that the certificate was cryptographically invalid
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate was cryptographically invalid", o.ToString(),
-                    StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once
-            );
+        MockLoggerTestHelper.VerifyLogEntry(
+            _mockLogger,
+            LogLevel.Error,
+            "Certificate was cryptographically invalid");
     }
 
 
@@ -331,10 +274,10 @@ public class TestCertificateController
     [Test]
     public async Task ShouldNotRetrievingCertificateFromAzureReturnBadRequest()
     {
-        
+        const int status = StatusCodes.Status404NotFound;
         _mockSignatureService.Setup(mockSignatureService =>
                 mockSignatureService.GetKeyVaultCertificateAsX509PemString())
-            .ThrowsAsync(new ResourceNotFoundException("Error retrieving certificate from Azure"));
+            .ThrowsAsync(new RequestFailedException(status, "Error retrieving certificate from Azure"));
         
         // when I upload the certificate
         var result = await _certificateController.GetAzureSigningCertificate();
@@ -344,19 +287,13 @@ public class TestCertificateController
         
         var gotStatusCode = (ObjectResult) result; // safe cast status code
         // and the status code should be 404
-        Assert.That(gotStatusCode.StatusCode, Is.EqualTo(StatusCodes.Status404NotFound));
+        Assert.That(gotStatusCode.StatusCode, Is.EqualTo(status));
         
         // and the logger should log an error
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate was not found", o.ToString(),
-                    StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once
-        );
+        MockLoggerTestHelper.VerifyLogContains(
+            _mockLogger,
+            LogLevel.Error,
+            "Azure failed in retrieving the certificate");
     }
     
 

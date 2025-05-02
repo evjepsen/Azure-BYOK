@@ -46,5 +46,23 @@ public static class Constants
     /// </summary>
     public const string InvalidInputForRequest = "The request could not be completed - the request body is invalid (Properly JSON formatting error)";
     
+    /// <summary>
+    /// Certificate is not yet valid
+    /// </summary>
+    public const string CertificateNotYetValid = "The certificate is not yet valid";
     
+    /// <summary>
+    /// The certificate has expired
+    /// </summary>
+    public const string CertificateHasExpired = "The certificate has expired";
+    
+    /// <summary>
+    /// The certificate is not valid
+    /// </summary>
+    public const string CertificateIsInvalid = "The certificate is invalid";
+    
+    /// <summary>
+    /// The success message when the certificate was uploaded successfully
+    /// </summary>
+    public const string CertificateWasUploadedSuccessfully = "Certificate was uploaded successfully";
 }

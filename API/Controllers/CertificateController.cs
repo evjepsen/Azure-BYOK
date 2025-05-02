@@ -73,13 +73,13 @@ public class CertificateController : Controller
             
             if (certificate.NotAfter < DateTime.UtcNow)
             {
-                _logger.LogError("Certificate has expired");
-                return BadRequest("Certificate has expired");
+                _logger.LogError(Constants.CertificateHasExpired);
+                return BadRequest(Constants.CertificateHasExpired);
             }
             if (DateTime.UtcNow < certificate.NotBefore)
             {
-                _logger.LogError("Certificate is not yet valid");
-                return BadRequest("Certificate is not yet valid");
+                _logger.LogError(Constants.CertificateNotYetValid);
+                return BadRequest(Constants.CertificateNotYetValid);
             }
         }
         catch (Exception e)
@@ -95,8 +95,8 @@ public class CertificateController : Controller
         }
         catch (InvalidOperationException)
         {
-            _logger.LogError("Certificate was not valid");
-            return BadRequest("Certificate was not valid");
+            _logger.LogError(Constants.CertificateIsInvalid);
+            return BadRequest(Constants.CertificateIsInvalid);
         }
         catch (Exception e)
         {
@@ -104,8 +104,8 @@ public class CertificateController : Controller
             return BadRequest("Error adding the certificate to the cache");
         }
         
-        _logger.LogInformation("Certificate was uploaded successfully");
-        return Ok("The certificate was uploaded successfully");
+        _logger.LogInformation(Constants.CertificateWasUploadedSuccessfully);
+        return Ok(Constants.CertificateWasUploadedSuccessfully);
     }
 
     /// <summary>
@@ -122,11 +122,6 @@ public class CertificateController : Controller
             var certificateAsPem = await _signatureService.GetKeyVaultCertificateAsX509PemString();
             _logger.LogInformation("Certificate was converted to PEM successfully");
             return Ok(certificateAsPem);
-        }
-        catch (ResourceNotFoundException)
-        {
-            _logger.LogError("Certificate was not found");
-            return StatusCode(StatusCodes.Status404NotFound, "Certificate was not found");
         }
         catch (CryptographicException)
         {
