@@ -51,20 +51,6 @@ public static class TestHelper
         return (Convert.ToBase64String(signature), dataBytes);
     }
     
-    public static KeyVaultCertificateWithPolicy CreateFakeKeyVaultCertificateWithPolicy()
-    {
-        // Use reflection to create an instance of KeyVaultCertificateWithPolicy
-        var constructor = typeof(KeyVaultCertificateWithPolicy)
-            .GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, [typeof(CertificateProperties)], null);
-        
-        if (constructor == null) throw new InvalidOperationException("Fake KeyVaultCertificateWithPolicy could not be created");
-    
-        var certificateProperties = new CertificateProperties("test-cert"); // Provide necessary arguments
-        var expectedResult = (KeyVaultCertificateWithPolicy) constructor.Invoke([certificateProperties]);
-        return expectedResult;
-
-    }
-    
     /// <summary>
     /// Helper method to create a fake IFormFile with a self-signed certificate
     /// </summary>

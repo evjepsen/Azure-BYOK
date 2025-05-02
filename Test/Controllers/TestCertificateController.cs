@@ -1,5 +1,3 @@
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using API.Controllers;
@@ -12,8 +10,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Test.TestHelpers;
 
-// 
-[assembly: InternalsVisibleTo("Test")]
 namespace Test.Controllers;
 
 [TestFixture]
@@ -38,9 +34,7 @@ public class TestCertificateController
         _mockCertificateCache = new Mock<ICertificateCache>();
         _certificateController = new CertificateController(_mockCertificateCache.Object,mockLoggerFactory.Object,_mockSignatureService.Object);
     }
-    /// <summary>
-    /// Tests for the UploadCustomerCertificate method in the CertificateController
-    /// </summary>
+
 
     [Test]
     public async Task ShouldUploadEmptyCertificateReturnBadRequest()
@@ -274,15 +268,9 @@ public class TestCertificateController
     [Test]
     public async Task ShouldGetAzureSigningCertificateWhenFoundReturnOk()
     {
-        
-        var expectedResult = TestHelper.CreateFakeKeyVaultCertificateWithPolicy;
-    
         _mockSignatureService.Setup(mockSignatureService =>
-            mockSignatureService.GetAzureSigningCertificate()).ReturnsAsync(expectedResult);
-        
-        _mockSignatureService.Setup(mockSignatureService =>
-                mockSignatureService.KeyVaultCertificateToX509PemString(It.Is<KeyVaultCertificateWithPolicy>(cert => ReferenceEquals(cert, expectedResult))))
-            .Returns("");
+                mockSignatureService.GetKeyVaultCertificateAsX509PemString())
+            .ReturnsAsync("");
         
         // when I upload the certificate
         var result = await _certificateController.GetAzureSigningCertificate();
@@ -299,17 +287,6 @@ public class TestCertificateController
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate was retrieved from Azure successfully", o.ToString(),
-                    StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once
-        );
-        
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate was converted to PEM successfully", o.ToString(),
                     StringComparison.InvariantCultureIgnoreCase)),
                 It.IsAny<Exception>(),
@@ -321,13 +298,9 @@ public class TestCertificateController
     [Test]
     public async Task ShouldACryptographicInvalidCertificateFromAzureReturnInternalServerError()
     {
-        var expectedResult = TestHelper.CreateFakeKeyVaultCertificateWithPolicy();
-
         _mockSignatureService.Setup(mockSignatureService =>
-            mockSignatureService.GetAzureSigningCertificate()).ReturnsAsync(expectedResult);
-        
-        _mockSignatureService.Setup(mockSignatureService =>
-            mockSignatureService.KeyVaultCertificateToX509PemString(expectedResult)).Throws(new CryptographicException("Certificate was cryptographically invalid"));
+            mockSignatureService.GetKeyVaultCertificateAsX509PemString())
+            .ThrowsAsync(new CryptographicException("Certificate was cryptographically invalid"));
         
         // when I upload the certificate
         var result = await _certificateController.GetAzureSigningCertificate();
@@ -339,18 +312,7 @@ public class TestCertificateController
         var gotStatusCode = (ObjectResult) result; // safe cast status code
         // and the status code should be 500
         Assert.That(gotStatusCode.StatusCode, Is.EqualTo(StatusCodes.Status500InternalServerError));
-        
-        // and the logger should log an that the certificate was received 
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => string.Equals("Certificate was retrieved from Azure successfully", o.ToString(),
-                    StringComparison.InvariantCultureIgnoreCase)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once
-            );
+   
         // but the logger should log that the certificate was cryptographically invalid
         _mockLogger.Verify(
             x => x.Log(
@@ -371,7 +333,7 @@ public class TestCertificateController
     {
         
         _mockSignatureService.Setup(mockSignatureService =>
-                mockSignatureService.GetAzureSigningCertificate())
+                mockSignatureService.GetKeyVaultCertificateAsX509PemString())
             .ThrowsAsync(new ResourceNotFoundException("Error retrieving certificate from Azure"));
         
         // when I upload the certificate

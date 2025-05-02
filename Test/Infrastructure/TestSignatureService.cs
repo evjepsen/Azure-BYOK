@@ -143,9 +143,8 @@ public class TestSignatureService
     {
         
         // Given a certificate in the key vault
-        var cert = await _signatureService.GetAzureSigningCertificate();
         // When I ask to convert the certificate to a PEM string
-        var pemString = _signatureService.KeyVaultCertificateToX509PemString(cert);
+        var pemString = await _signatureService.GetKeyVaultCertificateAsX509PemString();
         
         // Then it should not be null
         Assert.That(pemString, Is.Not.Null);

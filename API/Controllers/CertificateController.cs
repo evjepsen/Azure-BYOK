@@ -119,9 +119,7 @@ public class CertificateController : Controller
     {
         try
         {
-            var azureCertificate = await _signatureService.GetAzureSigningCertificate();
-            _logger.LogInformation("Certificate was retrieved from Azure successfully");
-            var certificateAsPem = _signatureService.KeyVaultCertificateToX509PemString(azureCertificate);
+            var certificateAsPem = await _signatureService.GetKeyVaultCertificateAsX509PemString();
             _logger.LogInformation("Certificate was converted to PEM successfully");
             return Ok(certificateAsPem);
         }

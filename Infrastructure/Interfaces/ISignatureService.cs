@@ -48,10 +48,9 @@ public interface ISignatureService
     public Task<KeyVaultCertificateWithPolicy> GetAzureSigningCertificate();
 
     /// <summary>
-    /// Converts the KeyVaultCertificateWithPolicy to a PEM string
+    /// Gets the key vault signing certificate as a PEM string
     /// </summary>
-    /// <param name="azureCertificate"></param>
-    /// <returns>String </returns>
-    public string KeyVaultCertificateToX509PemString(KeyVaultCertificateWithPolicy azureCertificate);
+    /// <returns>The pem string of the certificate</returns>
+    public Task<string> GetKeyVaultCertificateAsX509PemString();
 
 }
