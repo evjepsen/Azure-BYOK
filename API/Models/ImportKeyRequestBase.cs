@@ -9,7 +9,7 @@ public class ImportEncryptedKeyRequest : EncryptedKeyRequestBase, IActionGroupsR
     /// <summary>
     /// The action groups that should be added to alert
     /// </summary>
-    public IEnumerable<string> ActionGroups { get; } = [];
+    public IEnumerable<string> ActionGroups { get; set; } = [];
 }
 
 /// <summary>
@@ -21,5 +21,5 @@ public class ImportKeyBlobRequest : KeyBlobRequestBase, IActionGroupsRequest
     /// <summary>
     /// The action groups that should be added to alert
     /// </summary>
-    public IEnumerable<string> ActionGroups { get; } = [];
+    public IEnumerable<string> ActionGroups { get; init; } = [];
 }
