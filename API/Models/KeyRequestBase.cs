@@ -20,7 +20,7 @@ public abstract class KeyRequestBase
     /// <summary>
     /// The timestamp of sending the request
     /// </summary>
-    public required DateTime TimeStamp { get; init; }
+    public required DateTime TimeStamp { get; set; }
     
     /// <summary>
     /// The signature in base64 format

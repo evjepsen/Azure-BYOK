@@ -77,6 +77,12 @@ public class AlertController : Controller
     {
         try
         {
+            if (receivers.Count == 0)
+            {
+                _logger.LogError("No receivers specified for action group {name}", name);
+                return BadRequest("Must specify at least one receiver");
+            }
+            
             _logger.LogInformation("Creating action group {name}", name);
             var res = await _alertService.CreateActionGroupAsync(name, receivers);
             return Ok(res);
