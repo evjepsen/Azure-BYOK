@@ -11,6 +11,7 @@ using Infrastructure.Helpers;
 using Infrastructure.Interfaces;
 using Infrastructure.Models;
 using Infrastructure.Options;
+using Infrastructure.Wrappers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -146,7 +147,7 @@ public class KeyVaultService : IKeyVaultService
         return kekSignedResponse;
     }
     
-    public async Task<DeletedKey> DeleteKeyAsync(string keyName)
+    public async Task<IDeletedKeyWrapper> DeleteKeyAsync(string keyName)
     {
         _logger.LogInformation("Deleting the key with name: {keyName}", keyName);
         var deleteKeyOperationAsync = await _client.StartDeleteKeyAsync(keyName);
@@ -158,7 +159,7 @@ public class KeyVaultService : IKeyVaultService
             throw new HttpRequestException("Failed to delete the key");
         }
         
-        return res.Value;
+        return new DeletedKeyWrapper(res.Value);
     }
     
     public async Task<Response> PurgeDeletedKeyAsync(string keyId)
