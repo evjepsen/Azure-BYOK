@@ -117,7 +117,7 @@ builder.Services.AddHttpClient("WaitAndRetry")
 
 // Add environment variables
 builder.Configuration
-    .AddJsonFile("appsettings.azure.json", false)
+    .AddJsonFile("appsettings.azure.json", true)
     .AddJsonFile("appsettings.json", false)
     .AddEnvironmentVariables()
     .Build();
