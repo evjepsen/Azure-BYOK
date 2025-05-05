@@ -14,6 +14,12 @@
 *.userosscache
 *.sln.docstates
 
+# terraform files
+*.tfstate
+.terraform
+.terraform.*
+*.tfstate.*
+
 # environment variables
 .env
 API/appsettings.azure.json
