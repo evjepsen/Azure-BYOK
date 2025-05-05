@@ -167,6 +167,7 @@ builder.Services.AddAuthentication(options =>
     .AddCookie(options =>
     {
         options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
         options.SlidingExpiration = true;
         options.LoginPath = new PathString("/authentication/login");
         options.LogoutPath = new PathString("/authentication/logout");
