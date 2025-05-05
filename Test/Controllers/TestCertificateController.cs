@@ -190,6 +190,37 @@ public class TestCertificateController
             LogLevel.Error,
             Constants.CertificateIsInvalid);
     }
+    
+    [Test]
+    public async Task ShouldOccurrenceOfInternalServerErrorWhenAddingCertificateReturnInternalServerError()
+    {
+        // Given a valid certificate file as IFormFile
+        var notBefore = DateTime.UtcNow.AddDays(-1);
+        var notAfter = DateTime.UtcNow.AddDays(1);
+        var fakeIForm = TestHelper.CreateCertTestFile(notBefore, notAfter);
+        
+        // and the certificate cache throws an exception
+        _mockCertificateCache.Setup(mockCache=> mockCache.AddCertificate(It.IsAny<X509Certificate2>()))
+            .Throws(new Exception("Certificate was not valid"));
+        
+        // when I upload the certificate
+        var result = await _certificateController.UploadCustomerCertificate(fakeIForm);
+        
+        // then it should return Internal Server error
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        
+        
+        var gotStatusCode = (ObjectResult) result; // safe cast status code
+        // and the status code should be 5++
+        Assert.That(gotStatusCode.StatusCode, Is.EqualTo(StatusCodes.Status500InternalServerError));
+        
+        // and the logger should log an error
+        MockLoggerTestHelper.VerifyLogContains(
+            _mockLogger,
+            LogLevel.Error,
+            "Error adding the certificate to the cache");
+    }
 
     [Test]
     public async Task ShouldValidCustomerCertificateWhenUploadedReturnOk()
@@ -291,6 +322,32 @@ public class TestCertificateController
             LogLevel.Error,
             "Azure failed in retrieving the certificate");
     }
+    
+    [Test]
+    public async Task ShouldInternalServerErrorWhenRetrievingCertificateFromAzureResultinABadRequest()
+    {
+        _mockSignatureService.Setup(mockSignatureService =>
+                mockSignatureService.GetKeyVaultCertificateAsX509PemString())
+            .ThrowsAsync(new Exception("Error"));
+        
+        // when I upload the certificate
+        var result = await _certificateController.GetAzureSigningCertificate();
+        
+        // then it should return 500
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        
+        var gotStatusCode = (ObjectResult) result; // safe cast status code
+        // and the status code should be 500
+        Assert.That(gotStatusCode.StatusCode, Is.EqualTo(StatusCodes.Status500InternalServerError));
+        
+        // and the logger should log an error
+        MockLoggerTestHelper.VerifyLogContains(
+            _mockLogger,
+            LogLevel.Error,
+            "An error occured when retrieving the certificate from azure");
+    }
+
     
 
     [TearDown]

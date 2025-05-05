@@ -70,22 +70,23 @@ public class CertificateController : Controller
         try
         {
             certificate = new X509Certificate2(certData);
-            
-            if (certificate.NotAfter < DateTime.UtcNow)
-            {
-                _logger.LogError(Constants.CertificateHasExpired);
-                return BadRequest(Constants.CertificateHasExpired);
-            }
-            if (DateTime.UtcNow < certificate.NotBefore)
-            {
-                _logger.LogError(Constants.CertificateNotYetValid);
-                return BadRequest(Constants.CertificateNotYetValid);
-            }
         }
-        catch (Exception e)
+        catch (CryptographicException e)
         {
             _logger.LogError("Error creating the certificate: {Message}", e.Message);
             return BadRequest("Error creating the certificate.");
+        }
+        
+        // Check that has a valid date
+        if (certificate.NotAfter < DateTime.UtcNow)
+        {
+            _logger.LogError(Constants.CertificateHasExpired);
+            return BadRequest(Constants.CertificateHasExpired);
+        }
+        if (DateTime.UtcNow < certificate.NotBefore)
+        {
+            _logger.LogError(Constants.CertificateNotYetValid);
+            return BadRequest(Constants.CertificateNotYetValid);
         }
 
         // Try to add the certificate to the cache
@@ -101,7 +102,7 @@ public class CertificateController : Controller
         catch (Exception e)
         {
             _logger.LogError("Error adding the certificate to the cache {Message}", e.Message);
-            return BadRequest("Error adding the certificate to the cache");
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error adding the certificate to the cache");
         }
         
         _logger.LogInformation(Constants.CertificateWasUploadedSuccessfully);
@@ -136,7 +137,7 @@ public class CertificateController : Controller
         catch (Exception e)
         {
             _logger.LogError("An error occured when retrieving the certificate from azure {Message}", e.Message);
-            return BadRequest("An unexpected error occurred when retrieving the certificate from azure");
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred when retrieving the certificate from azure");
         }
     }
 }
