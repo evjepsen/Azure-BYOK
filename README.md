@@ -21,8 +21,13 @@ You have to set up the following variables:
 - `AllowedEmails`
 - `SigningCertificateName`
 - `ValidSubject`
+- `Jwt:Issuer`
+- `Jwt:Audience`
+- `Jwt:Secret`
 
 They are read from the appsettings.azure.json, so you have create one in the `API` directory
+
+When setting up the `AllowedEmails`, you can use a comma separated list of emails. The above fields need to be included in either ´appsettings.azure.json´ or ´appsettings.json´ - the location doesn't really matter. They just have to present.
 
 Example ´appsettings.azure.json´ file:
 
@@ -39,6 +44,11 @@ Example ´appsettings.azure.json´ file:
     ],
     "SigningCertificateName": "BYOK-Signing-Certificate",
     "ValidSubject" : "cn=Customer HSM"
+    "Jwt" : {
+      "Issuer": "BYOK",
+      "Audience": "xxx",
+      "Secret": "xxx"
+    }
   }
 }
 ```
