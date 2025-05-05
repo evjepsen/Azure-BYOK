@@ -36,7 +36,7 @@
       <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <Content Include="..\API\appsettings.azure.json" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="..\API\appsettings.azure.json" Condition="Exists('..\API\appsettings.azure.json')" CopyToOutputDirectory="PreserveNewest" />
         <Content Include="..\API\appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
