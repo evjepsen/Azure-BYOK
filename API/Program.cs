@@ -228,14 +228,11 @@ builder.Services.AddAuthorizationBuilder()
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI( 
-        // Removes the requirement for clicking the "Try it out" button in Swagger UI when using a endpoint
-        options => options.EnableTryItOutByDefault()
-        );
-}
+app.UseSwagger();
+app.UseSwaggerUI( 
+    // Removes the requirement for clicking the "Try it out" button in Swagger UI when using a endpoint
+    options => options.EnableTryItOutByDefault()
+);
 
 app.UseHttpsRedirection();
 
