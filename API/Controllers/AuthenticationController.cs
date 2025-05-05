@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using API.Models;
 using Google.Apis.Auth.AspNetCore3;
 using Infrastructure.Interfaces;
 using Infrastructure.Options;
@@ -38,7 +39,7 @@ public class AuthenticationController : Controller
         
         // Valid email addresses
         _validEmails = applicationOptions.Value.AllowedEmails;
-
+    
     }
     
     /// <summary>
@@ -59,10 +60,10 @@ public class AuthenticationController : Controller
         if (!_schemeMap.TryGetValue(provider, out var scheme))
         {
             _logger.LogWarning("The provider {provider} is not supported", provider);
-            return BadRequest("The provider is not supported");
+            return BadRequest($"The provider {provider} is not supported");
         }
         
-        _logger.LogInformation("Issuing the user a challenge for the provider {provider}", provider);
+        _logger.LogInformation("Issuing the user a {provider} provided challenge", provider);
         return Challenge(properties, scheme);
     }
 
@@ -72,12 +73,18 @@ public class AuthenticationController : Controller
     [HttpGet("callback")]
     public async Task<IActionResult> Callback(string provider)
     {
-        var authResult = await HttpContext.AuthenticateAsync(_schemeMap[provider]);
+        if (!_schemeMap.TryGetValue(provider, out var scheme))
+        {
+            _logger.LogWarning("The provider {provider} is not supported", provider);
+            return BadRequest($"The provider {provider} is not supported");
+        }
+        
+        var authResult = await HttpContext.AuthenticateAsync(scheme);
         
         if (!authResult.Succeeded)
         {
-            _logger.LogError("Authentication failed ({provider})", provider);
-            return BadRequest("Authentication failed");
+            _logger.LogError("Authentication failed ({provider}) - Exception: {reason}", provider, authResult.Failure);
+            return Unauthorized("Authentication failed");
         }
         
         // Check that the user's emails is in the allowed list
@@ -104,6 +111,6 @@ public class AuthenticationController : Controller
         var accessToken = _jwtService.GenerateAccessToken(claims);
         
         // Return the access token for further use
-        return Ok(new {accessToken});
+        return Ok(new CallbackResult{AccessToken = accessToken});
     }
 }
