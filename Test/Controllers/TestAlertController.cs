@@ -14,7 +14,6 @@ namespace Test.Controllers;
 
 [TestFixture]
 [TestOf(typeof(AlertController))]
-
 public class TestAlertController
 {
     private AlertController _alertController;
@@ -30,7 +29,7 @@ public class TestAlertController
         mockLoggerFactory.Setup(logger => logger.CreateLogger(It.IsAny<string>()))
             .Returns(_mockLogger.Object);
         
-        _alertController = new AlertController(_mockAlertService.Object,mockLoggerFactory.Object);
+        _alertController = new AlertController(_mockAlertService.Object, mockLoggerFactory.Object);
     }
 
     [Test]

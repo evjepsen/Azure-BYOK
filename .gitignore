@@ -19,6 +19,7 @@
 *.tfstate.*
 *.hcl
 .terraform
+.terraform.*
 
 # environment variables
 .env

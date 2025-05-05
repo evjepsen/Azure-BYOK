@@ -17,7 +17,7 @@ public class JwtService : IJwtService
         _jwtOptions = jwtOptions.Value;
     }
 
-    public string GenerateAccessToken(List<Claim> claims)
+    public string GenerateAccessToken(IEnumerable<Claim> claims)
     {
         var jwtTokenHandler = new JwtSecurityTokenHandler();
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
