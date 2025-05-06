@@ -123,6 +123,7 @@ public class KeyVaultManagementService : IKeyVaultManagementService
             }
             else
             {
+                _logger.LogInformation("Accessing the display name for the principal {principalId}", principalId);
                 displayName = _displayNameCache.GetOrAdd(principalId, key =>
                 {
                     var directoryObject = _graphClient
