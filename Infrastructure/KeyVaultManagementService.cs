@@ -126,11 +126,20 @@ public class KeyVaultManagementService : IKeyVaultManagementService
                 _logger.LogInformation("Accessing the display name for the principal {principalId}", principalId);
                 displayName = _displayNameCache.GetOrAdd(principalId, key =>
                 {
-                    var directoryObject = _graphClient
-                        .DirectoryObjects[key]
-                        .GetAsync()
-                        .GetAwaiter()
-                        .GetResult();
+                    DirectoryObject? directoryObject;
+                    try
+                    {
+                        directoryObject = _graphClient
+                            .DirectoryObjects[key]
+                            .GetAsync()
+                            .GetAwaiter()
+                            .GetResult();
+                    }
+                    catch (Exception)
+                    {
+                        return key;
+                    }
+                    
 
                     if (directoryObject == null)
                     {
