@@ -37,6 +37,11 @@ variable "google_client_secret" {
   description = "The google client secret."
 }
 
+variable "signing_cert_name" {
+  type        = string
+  description = "The Signing certificate name."
+}
+
 variable "jwt_secret" {
   type        = string
   description = "The JWT secret."
@@ -68,14 +73,65 @@ resource "azurerm_log_analytics_workspace" "ai" {
 
 # Create a key vault
 resource "azurerm_key_vault" "vault" {
-  name                       = "BYOK-KV"
+  name                       = "BYOK-CUSTOMER-KV"
   location                   = azurerm_resource_group.rg.location
   resource_group_name        = azurerm_resource_group.rg.name
   tenant_id                  = data.azurerm_client_config.current.tenant_id
   sku_name                   = "premium"
   soft_delete_retention_days = 7
   purge_protection_enabled   = false
+  enable_rbac_authorization  = true
 }
+
+resource "azurerm_role_assignment" "kv_cert_officer" {
+  scope                = azurerm_key_vault.vault.id
+  role_definition_name = "Key Vault Certificates Officer"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
+resource "azurerm_key_vault_certificate" "signing_cert" {
+  key_vault_id = azurerm_key_vault.vault.id
+  name         = var.signing_cert_name
+
+  certificate_policy {
+    issuer_parameters {
+      name = "Self"
+    }
+
+    key_properties {
+      exportable = false
+      key_type   = "RSA-HSM"
+      key_size   = 2048
+      reuse_key  = false
+    }
+
+    lifetime_action {
+      action {
+        action_type = "AutoRenew"
+      }
+      trigger {
+        days_before_expiry = 30
+      }
+    }
+
+    secret_properties {
+      content_type = "application/x-pkcs12"
+    }
+
+    x509_certificate_properties {
+      subject = "CN=Customer HSM"
+      key_usage = [
+        "digitalSignature",
+      ]
+
+      validity_in_months = 12
+
+    }
+  }
+
+  depends_on = [azurerm_role_assignment.kv_cert_officer]
+}
+
 
 # Create an app service plan for the middleware
 resource "azurerm_service_plan" "appserviceplan" {
@@ -108,6 +164,15 @@ resource "azurerm_windows_web_app" "webapp-middleware" {
 
   }
 
+  logs {
+    detailed_error_messages = true
+    failed_request_tracing  = true
+
+    application_logs {
+      file_system_level = "Information"
+    }
+  }
+
   app_settings = {
     "ASPNETCORE_ENVIRONMENT"   = "Production"
     "WEBSITE_RUN_FROM_PACKAGE" = "1"
@@ -116,8 +181,8 @@ resource "azurerm_windows_web_app" "webapp-middleware" {
     "ApplicationOptions__SubscriptionId"         = var.subscription_id
     "ApplicationOptions__ResourceGroupName"      = azurerm_resource_group.rg.name
     "ApplicationOptions__KeyVaultResourceName"   = azurerm_key_vault.vault.name
-    "ApplicationOptions__AllowedEmails"          = "[\"ej@csep.dk\", \"lord64hacker@gmail.com\", \"davidm.bernardo@gmail.com\"]"
-    "ApplicationOptions__SigningCertificateName" = "BYOK-SigningCert"
+    "ApplicationOptions__AllowedEmails"          = jsonencode(["ej@csep.dk", "lord64hacker@gmail.com", "davidm.bernardo@gmail.com"])
+    "ApplicationOptions__SigningCertificateName" = var.signing_cert_name
     "ApplicationOptions__ValidSubject"           = "cn=Customer HSM"
 
     # Authentication settings 
@@ -133,13 +198,22 @@ resource "azurerm_windows_web_app" "webapp-middleware" {
   }
 }
 
-#  Deploy code from a public GitHub repo
-resource "azurerm_app_service_source_control" "sourcecontrol-middleware" {
-  app_id                 = azurerm_windows_web_app.webapp-middleware.id
-  repo_url               = "https://github.com/evjepsen/Azure-BYOK"
-  branch                 = "master"
-  use_manual_integration = true
-  use_mercurial          = false
+resource "azurerm_role_assignment" "webapp-role-assigment-contributor" {
+  principal_id         = azurerm_windows_web_app.webapp-middleware.identity[0].principal_id
+  scope                = azurerm_key_vault.vault.id
+  role_definition_name = "Contributor"
+}
+
+resource "azurerm_role_assignment" "webapp-role-assigment-cert-officer" {
+  principal_id         = azurerm_windows_web_app.webapp-middleware.identity[0].principal_id
+  scope                = azurerm_key_vault.vault.id
+  role_definition_name = "Key Vault Certificates Officer"
+}
+
+resource "azurerm_role_assignment" "webapp-role-assigment-crypto-officer" {
+  principal_id         = azurerm_windows_web_app.webapp-middleware.identity[0].principal_id
+  scope                = azurerm_key_vault.vault.id
+  role_definition_name = "Key Vault Crypto Officer"
 }
 
 # Create a database for the fake ERP system
@@ -193,6 +267,15 @@ resource "azurerm_windows_web_app" "webapp-ERP" {
 
   }
 
+  logs {
+    detailed_error_messages = true
+    failed_request_tracing  = true
+
+    application_logs {
+      file_system_level = "Information"
+    }
+  }
+
   app_settings = {
     "ASPNETCORE_ENVIRONMENT"   = "Production"
     "WEBSITE_RUN_FROM_PACKAGE" = "1"
@@ -201,23 +284,8 @@ resource "azurerm_windows_web_app" "webapp-ERP" {
   connection_string {
     name  = "DefaultConnection"
     type  = "SQLAzure"
-    value = "Data Source=tcp:${azurerm_mssql_server.dbServer.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.db.name};User Id=${azurerm_mssql_server.dbServer.administrator_login};Password=${random_password.admin_password[0].result};Encrypt=true;TrustServerCertificate=false;MultipleActiveResultSets=true;"
+    value = "Server=tcp:${azurerm_mssql_server.dbServer.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.db.name};Persist Security Info=False;User ID=${azurerm_mssql_server.dbServer.administrator_login};Password=${random_password.admin_password[0].result};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
   }
-}
-
-# Key Vault access policy for the web app's managed identity
-resource "azurerm_key_vault_access_policy" "webapp_access" {
-  key_vault_id = azurerm_key_vault.vault.id
-  tenant_id    = data.azurerm_client_config.current.tenant_id
-  object_id    = azurerm_windows_web_app.webapp-middleware.identity[0].principal_id
-
-  key_permissions = [
-    "Get", "List", "Sign", "Verify", "WrapKey", "UnwrapKey"
-  ]
-
-  secret_permissions = [
-    "Get", "List"
-  ]
 }
 
 # Setup the log analytics workspace for the key vault
