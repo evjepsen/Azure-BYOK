@@ -20,7 +20,7 @@ public class KeyVaultManagementService : IKeyVaultManagementService
     private readonly KeyVaultResource _keyVaultResource;
     private readonly ILogger<KeyVaultManagementService> _logger;
     private readonly Dictionary<string, string> _roleDefinitionMap;
-    private readonly ConcurrentDictionary<string, string> _displayNameCache;
+    private readonly ConcurrentDictionary<string, Task<string>> _displayNameCache;
     private readonly GraphServiceClient _graphClient;
 
     public KeyVaultManagementService(IOptions<ApplicationOptions> applicationOptions, ILoggerFactory loggerFactory)
@@ -74,7 +74,7 @@ public class KeyVaultManagementService : IKeyVaultManagementService
         // Create the graph client
         var scopes = new[] { "https://graph.microsoft.com/.default" };
         _graphClient = new GraphServiceClient(credential, scopes);
-        _displayNameCache = new ConcurrentDictionary<string, string>();
+        _displayNameCache = new ConcurrentDictionary<string, Task<string>>();
     }
 
     public bool DoesKeyVaultHavePurgeProtection()
@@ -124,36 +124,7 @@ public class KeyVaultManagementService : IKeyVaultManagementService
             else
             {
                 _logger.LogInformation("Accessing the display name for the principal {principalId}", principalId);
-                displayName = _displayNameCache.GetOrAdd(principalId, key =>
-                {
-                    DirectoryObject? directoryObject;
-                    try
-                    {
-                        directoryObject = _graphClient
-                            .DirectoryObjects[key]
-                            .GetAsync()
-                            .GetAwaiter()
-                            .GetResult();
-                    }
-                    catch (Exception)
-                    {
-                        return key;
-                    }
-                    
-
-                    if (directoryObject == null)
-                    {
-                        _logger.LogWarning("Principal {key} not found in Graph API", key);
-                        throw new ResourceNotFoundException($"Failed to retrieve principal {key}");
-                    }
-
-                    return directoryObject switch
-                    {
-                        User u => u.DisplayName ?? key,
-                        ServicePrincipal sp => sp.DisplayName ?? key,
-                        _ => key
-                    };
-                });
+                displayName = await _displayNameCache.GetOrAdd(principalId, ResolvePrincipalDisplayNameSafeAsync);
             }
             
             // Create the role assignment details object
@@ -174,4 +145,27 @@ public class KeyVaultManagementService : IKeyVaultManagementService
     
         return assignmentsList;
     }
+    
+    private async Task<string> ResolvePrincipalDisplayNameSafeAsync(string objectId)
+    {
+        try
+        {
+            var directoryObject = await _graphClient
+                .DirectoryObjects[objectId]
+                .GetAsync();
+
+            return directoryObject switch
+            {
+                User u             => u.DisplayName  ?? objectId,
+                ServicePrincipal s => s.DisplayName  ?? objectId,
+                _                  => objectId
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error resolving principal {objectId}", objectId);
+            return objectId;
+        }
+    }
 }
+
