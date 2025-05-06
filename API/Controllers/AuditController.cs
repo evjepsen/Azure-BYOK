@@ -100,7 +100,7 @@ public class AuditController : Controller
         }
         catch (Exception e)
         {
-            _logger.LogError(e, Constants.InternalServerErrorOccuredWhenGettingRoleAssignments);
+            _logger.LogError(e, Constants.InternalServerErrorOccuredWhenGettingRoleAssignments + " {Message}", e.Message);
             return StatusCode(StatusCodes.Status500InternalServerError, Constants.InternalServerErrorOccuredWhenGettingRoleAssignments);
         }
     }
