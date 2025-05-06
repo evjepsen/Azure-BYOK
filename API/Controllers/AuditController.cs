@@ -98,9 +98,9 @@ public class AuditController : Controller
             _logger.LogError("Azure failed to get the role assignments: {errorMessage}", e.Message);
             return StatusCode(e.Status, e.ErrorCode);
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            _logger.LogError(Constants.InternalServerErrorOccuredWhenGettingRoleAssignments);
+            _logger.LogError(e, Constants.InternalServerErrorOccuredWhenGettingRoleAssignments);
             return StatusCode(StatusCodes.Status500InternalServerError, Constants.InternalServerErrorOccuredWhenGettingRoleAssignments);
         }
     }
