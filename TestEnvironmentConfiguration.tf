@@ -216,6 +216,12 @@ resource "azurerm_role_assignment" "webapp-role-assigment-crypto-officer" {
   role_definition_name = "Key Vault Crypto Officer"
 }
 
+resource "azurerm_role_assignment" "webapp-role-assigment-user-access-administrator" {
+  principal_id         = azurerm_windows_web_app.webapp-middleware.identity[0].principal_id
+  scope                = azurerm_key_vault.vault.id
+  role_definition_name = "User Access Administrator "
+}
+
 # Create a database for the fake ERP system
 resource "random_password" "admin_password" {
   count       = 1
