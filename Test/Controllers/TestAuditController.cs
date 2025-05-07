@@ -225,7 +225,7 @@ public class TestAuditController
             LogLevel.Information,
             "Getting role assignments");
         
-        MockLoggerTestHelper.VerifyLogEntry(
+        MockLoggerTestHelper.VerifyLogContains(
             _mockLogger,
             LogLevel.Error,
             Constants.InternalServerErrorOccuredWhenGettingRoleAssignments);
