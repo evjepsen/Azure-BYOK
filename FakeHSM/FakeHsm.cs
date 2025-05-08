@@ -46,7 +46,7 @@ public class FakeHsm : IFakeHsm
 
     public string SignData(byte[] keyData, DateTime timeStamp)
     {
-        var timeStampAsString = timeStamp.ToString(CultureInfo.CurrentCulture);
+        var timeStampAsString = timeStamp.ToString("en-US");
         var timestampData = System.Text.Encoding.UTF8.GetBytes(timeStampAsString);
         var data = keyData.Concat(timestampData).ToArray();
         
@@ -57,7 +57,11 @@ public class FakeHsm : IFakeHsm
     public X509Certificate2 GetCertificateForPrivateKey()
     {
         var req = new CertificateRequest("cn=Customer HSM", _privateKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        var cert = req.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(1));
+        var timeNow = DateTime.Now;
+        var localOffset = TimeZoneInfo.Local.GetUtcOffset(timeNow);
+        var notBefore = new DateTimeOffset(timeNow.Add(-localOffset));
+        var notAfter = notBefore.AddYears(1);
+        var cert = req.CreateSelfSigned(notBefore, notAfter);
         var certData = cert.Export(X509ContentType.Cert);
         return new X509Certificate2(certData);
     }

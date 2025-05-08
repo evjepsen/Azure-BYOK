@@ -74,7 +74,7 @@ public class SignatureService : ISignatureService
     {
         _logger.LogInformation("Setting up the data to verify the signature on");
         
-        var timeStampAsString = timeStamp.ToString(CultureInfo.CurrentCulture);
+        var timeStampAsString = timeStamp.ToString("en-US");
         var timestampData = System.Text.Encoding.UTF8.GetBytes(timeStampAsString);
         
         return keyData.Concat(timestampData).ToArray();
