@@ -220,7 +220,26 @@ public class TestKeyVaultService
         // Then they should be valid
         Assert.That(result.IsValid, Is.False);
         Assert.That(result.ErrorMessage, Is.EqualTo("Invalid key operations detected: abc"));
-    } 
+    }
+
+    [Test]
+    public async Task ShouldReturnValidPemOnKnownKek()
+    {
+        // Given that there is a known key in the key vault
+        var keyName = $"key-{Guid.NewGuid()}";
+        _createdKeys.Add(keyName);
+        
+        await _keyVaultService.GenerateKekAsync(keyName);
+        
+        // When I ask for it's PEM
+        var pem = await _keyVaultService.GetPemOfKey(keyName);
+        
+        // Then it should return the PEM
+        Assert.That(pem, Is.Not.Empty);
+        Assert.That(pem, Does.StartWith("-----BEGIN RSA PUBLIC KEY-----"));
+        Assert.That(pem, Does.EndWith("-----END RSA PUBLIC KEY-----"));
+    }
+    
     
     [OneTimeTearDown]
     public async Task TearDown()
