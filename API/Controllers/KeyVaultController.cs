@@ -150,31 +150,31 @@ public class KeyVaultController : Controller
         return await ExecuteUploadWithErrorHandling(transferBlobStrategy, request);
     }
     /// <summary>
-    /// Endpoint to get the public key part of a Key Encryption Key (KEK) in PEM format
+    /// Endpoint to get the public key part of a key in PEM format
     /// </summary>
-    /// <param name="kekName">The name of the key encryption key</param>
-    /// <response code="200">Returns the public key of KEK in PEM format</response>
+    /// <param name="keyName">The name of the key</param>
+    /// <response code="200">Returns the public key of key in PEM format</response>
     /// <response code="404">Key not found</response>
     /// <response code="400">Bad request. See the error code for details</response>
     /// <response code="401">Unauthorized</response>
     /// <response code="500">Internal server error</response>
-    [HttpGet("PEM/{kekName}")]
-    public async Task<IActionResult> GetPemOfKek(string kekName)
+    [HttpGet("PEM/{keyName}")]
+    public async Task<IActionResult> GetPemOfKek(string keyName)
     {
         try
         {
-            _logger.LogInformation("Accessing the public key of the key encryption key {kekName} in PEM format", kekName);
-            var response = await _keyVaultService.GetPemOfKey(kekName);
-            return Ok(response.PemString);
+            _logger.LogInformation("Accessing the public key of the key encryption key {keyName} in PEM format", keyName);
+            var response = await _keyVaultService.GetPemOfKey(keyName);
+            return Ok(response);
         }
         catch (RequestFailedException e)
         {
-            _logger.LogError("Azure failed to get the key encryption key {kekName}: {errorMessage}", kekName, e.Message);
+            _logger.LogError(e, "Azure failed to get the key encryption key {keyName}", keyName);
             return StatusCode(e.Status,e.ErrorCode);
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            _logger.LogError("An unexpected error occurred while getting the key encryption key {kekName}", kekName);
+            _logger.LogError(e, "An unexpected error occurred while getting the key encryption key {kekName}", keyName);
             return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred");
         }
     }
