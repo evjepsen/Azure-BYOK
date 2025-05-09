@@ -14,11 +14,12 @@
 *.userosscache
 *.sln.docstates
 
-# terraform files
+# Terraform files
 *.tfstate
+*.tfstate.*
+*.hcl
 .terraform
 .terraform.*
-*.tfstate.*
 
 # environment variables
 .env
