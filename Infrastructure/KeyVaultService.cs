@@ -235,4 +235,18 @@ public class KeyVaultService : IKeyVaultService
             ErrorMessage = string.Empty,
         };
     }
+
+    public async Task<string> GetPemOfKey(string keyName)
+    {
+        _logger.LogInformation("Getting PEM of key with name: {keyName}", keyName);
+        var key = await _client.GetKeyAsync(keyName);
+        if (!key.HasValue)
+        {
+            _logger.LogError("Failed to get the PEM of the key with name: {keyName}", keyName);
+            throw new HttpRequestException($"Failed to get the PEM of the key with name: {keyName}");
+        }
+        
+        var rsaKey = key.Value.Key.ToRSA();
+        return rsaKey.ExportRSAPublicKeyPem();
+    }
 }
