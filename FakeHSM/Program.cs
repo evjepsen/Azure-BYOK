@@ -78,8 +78,8 @@ public abstract class Program
         var cert = fakeHsm.GetCertificateForPrivateKey();
         Console.WriteLine("Specify where the cert should be saved");
         var file = Console.ReadLine();
-        Console.WriteLine($"Saving the certificate at '{file}/cert.crt'");
-        File.WriteAllBytes($"{file}/cert.cer", cert.Export(X509ContentType.Cert));
+        Console.WriteLine($"Saving the certificate at '{file}/cert.cert'");
+        File.WriteAllBytes($"{file}/cert.cert", cert.Export(X509ContentType.Cert));
         
         Console.WriteLine("Press any key to exit...");
         Console.ReadKey();

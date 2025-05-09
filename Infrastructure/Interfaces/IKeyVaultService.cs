@@ -59,4 +59,11 @@ public interface IKeyVaultService
     /// <param name="keyOperations">The key operations to validate</param>
     /// <returns>An object containing the result and invalid key operations (if any)</returns>
     public KeyOperationsValidationResult ValidateKeyOperations(string[] keyOperations);
+    
+    /// <summary>
+    /// Returns the PEM of a key
+    /// </summary>
+    /// <param name="keyName">The name of the key</param>
+    /// <returns>A string of the PEM</returns>
+    public Task<PublicKeyKekPem> GetPemOfKey(string keyName);
 }
