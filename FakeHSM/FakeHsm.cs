@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using FakeHSM.Interfaces;
 using Infrastructure.Interfaces;
