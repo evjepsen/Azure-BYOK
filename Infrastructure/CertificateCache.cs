@@ -21,7 +21,7 @@ public class CertificateCache : ICertificateCache
 
     public X509Certificate2? GetCertificate()
     {
-        _logger.LogInformation("Getting the certificate from the cache");
+        _logger.LogInformation("Getting the certificate from the cache {cert}", _certificate);
         return _certificate;
     }
 
