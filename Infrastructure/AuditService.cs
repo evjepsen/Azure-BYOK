@@ -41,7 +41,13 @@ public class AuditService : IAuditService
     {
         // Ensures that the result is given in JSON format
         _logger.LogInformation("Querying key operations performed");
-        const string query = "AzureDiagnostics | where OperationName startswith \"key\" | extend PackedRecord = pack_all() | project PackedRecord";
+        const string query = """
+                             AzureDiagnostics 
+                             | sort by TimeGenerated desc 
+                             | where OperationName startswith "key" 
+                             | extend PackedRecord = pack_all() 
+                             | project PackedRecord
+                             """;
         return await GetLogs(numOfDays, query);
     }
     
@@ -49,7 +55,13 @@ public class AuditService : IAuditService
     {
         // Ensures that the result is given in JSON format
         _logger.LogInformation("Querying vault operations performed");
-        const string query = "AzureDiagnostics | where OperationName startswith \"vault\" | extend PackedRecord = pack_all() | project PackedRecord"; 
+        const string query = """
+                             AzureDiagnostics 
+                             | sort by TimeGenerated desc 
+                             | where OperationName startswith "vault" 
+                             | extend PackedRecord = pack_all() 
+                             | project PackedRecord
+                             """;
         return await GetLogs(numOfDays, query);
     }
 
@@ -58,6 +70,7 @@ public class AuditService : IAuditService
         _logger.LogInformation("Querying key vault activity");
         const string query = """
                              AzureActivity 
+                             | sort by TimeGenerated desc  
                              | project-away Authorization, Claims, Properties
                              | extend PackedRecord = pack_all() 
                              | project PackedRecord
