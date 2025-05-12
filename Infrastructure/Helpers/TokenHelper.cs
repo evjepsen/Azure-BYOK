@@ -9,7 +9,7 @@ public static class TokenHelper
     {
         return JsonSerializer.Serialize(jsonObject, new JsonSerializerOptions
         {
-            WriteIndented = true,
+            WriteIndented = false,
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         });
     }

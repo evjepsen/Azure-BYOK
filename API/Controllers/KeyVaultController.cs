@@ -136,7 +136,6 @@ public class KeyVaultController : Controller
         
         // Check that the request is valid
         var jsonKeyTransferBlob = TokenHelper.SerializeObject(request.KeyTransferBlob);
-        _logger.LogInformation("The serialized key transfer blob: {transferBlob}", jsonKeyTransferBlob);
         var keyData = Encoding.UTF8.GetBytes(jsonKeyTransferBlob);
         var actionResult = await CheckValidityOfImportRequestAsync(request, keyData);
 
