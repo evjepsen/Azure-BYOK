@@ -8,6 +8,7 @@ namespace Infrastructure;
 
 public class CertificateCache : ICertificateCache
 {
+    private readonly ReaderWriterLockSlim _certificateLock = new();
     private X509Certificate2? _certificate;
     private readonly ILogger<CertificateCache> _logger;
     private readonly ApplicationOptions _applicationOption;
@@ -21,22 +22,43 @@ public class CertificateCache : ICertificateCache
 
     public X509Certificate2? GetCertificate()
     {
-        _logger.LogInformation("Getting the certificate from the cache {cert}", _certificate);
-        return _certificate;
+        try
+        {
+            _certificateLock.EnterReadLock();
+            _logger.LogInformation("Getting the certificate from the cache {cert}", _certificate);
+            return _certificate;
+        }
+        finally
+        {
+            _certificateLock.ExitReadLock();
+        }
+        
     }
 
     public void AddCertificate(X509Certificate2 certificate)
     {
-        var isCertificateValid = ValidateCertificate(certificate);
+        try
+        {
+            _certificateLock.EnterWriteLock();
 
-        if (isCertificateValid)
-        {
-            _logger.LogInformation("Adding the certificate to the cache");
-            _certificate = certificate;
-        } else 
-        {
-            throw new InvalidOperationException("Invalid certificate.");
+            var isCertificateValid = ValidateCertificate(certificate);
+
+            if (isCertificateValid)
+            {
+                _logger.LogInformation("Adding the certificate to the cache");
+                _certificate?.Dispose();
+                _certificate = new X509Certificate2(certificate);
+            }
+            else
+            {
+                throw new InvalidOperationException("Invalid certificate.");
+            }
         }
+        finally
+        {
+            _certificateLock.ExitWriteLock();
+        }
+        
     }
 
     public bool ValidateCertificate(X509Certificate2 certificate)
