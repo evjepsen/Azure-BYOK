@@ -63,6 +63,40 @@ resource "azurerm_resource_group" "rg" {
   location = "North Europe"
 }
 
+# Create virtual network and subnet
+resource "azurerm_virtual_network" "vnet" {
+  name                = "BYOK-VNET"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
+resource "azurerm_subnet" "endpoint_subnet" {
+  name                 = "PrivateEndpoint-Subnet"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["10.0.3.0/24"]
+}
+
+resource "azurerm_subnet" "internal" {
+  address_prefixes     = ["10.0.2.0/24"]
+  name                 = "Shared-BYOK-Subnet"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+
+  service_endpoints = ["Microsoft.KeyVault"]
+
+  delegation {
+    name = "app-service-delegation"
+
+    service_delegation {
+      name    = "Microsoft.Web/serverFarms"
+      actions = ["Microsoft.Network/virtualNetworks/subnets/action"]
+    }
+  }
+}
+
+
 # Create a log analytics workspace to store logs (both for the web app and key vault)
 resource "azurerm_log_analytics_workspace" "ai" {
   location            = azurerm_resource_group.rg.location
@@ -79,8 +113,15 @@ resource "azurerm_key_vault" "vault" {
   tenant_id                  = data.azurerm_client_config.current.tenant_id
   sku_name                   = "premium"
   soft_delete_retention_days = 7
-  purge_protection_enabled   = false
+  purge_protection_enabled   = true
   enable_rbac_authorization  = true
+
+  network_acls {
+    bypass                     = "AzureServices"
+    default_action             = "Deny"
+    virtual_network_subnet_ids = [azurerm_subnet.internal.id]
+    ip_rules                   = ["185.45.22.131/32"]
+  }
 }
 
 resource "azurerm_role_assignment" "kv_cert_officer" {
@@ -198,6 +239,48 @@ resource "azurerm_windows_web_app" "webapp-middleware" {
   }
 }
 
+# Integrate App Service with Virtual Network
+resource "azurerm_app_service_virtual_network_swift_connection" "vnet_integration" {
+  app_service_id = azurerm_windows_web_app.webapp-middleware.id
+  subnet_id      = azurerm_subnet.internal.id
+}
+
+# Create a private DNS zone for Key Vault
+resource "azurerm_private_dns_zone" "keyvault_dns" {
+  name                = "privatelink.vaultcore.azure.net"
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
+# Link the DNS zone to the virtual network
+resource "azurerm_private_dns_zone_virtual_network_link" "dns_link" {
+  name                  = "keyvault-dns-link"
+  resource_group_name   = azurerm_resource_group.rg.name
+  private_dns_zone_name = azurerm_private_dns_zone.keyvault_dns.name
+  virtual_network_id    = azurerm_virtual_network.vnet.id
+  registration_enabled  = false
+}
+
+# Create a private endpoint for the Key Vault
+resource "azurerm_private_endpoint" "kv_private_endpoint" {
+  name                = "kv-private-endpoint"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  subnet_id           = azurerm_subnet.endpoint_subnet.id
+
+  private_service_connection {
+    name                           = "kv-connection"
+    private_connection_resource_id = azurerm_key_vault.vault.id
+    is_manual_connection           = false
+    subresource_names              = ["vault"]
+  }
+
+  private_dns_zone_group {
+    name                 = "kv-dns-grouop"
+    private_dns_zone_ids = [azurerm_private_dns_zone.keyvault_dns.id]
+  }
+}
+
+# Create a role assigment for the web app to access the key vault
 resource "azurerm_role_assignment" "webapp-role-assigment-contributor" {
   principal_id         = azurerm_windows_web_app.webapp-middleware.identity[0].principal_id
   scope                = azurerm_key_vault.vault.id
@@ -219,7 +302,7 @@ resource "azurerm_role_assignment" "webapp-role-assigment-crypto-officer" {
 resource "azurerm_role_assignment" "webapp-role-assigment-user-access-administrator" {
   principal_id         = azurerm_windows_web_app.webapp-middleware.identity[0].principal_id
   scope                = azurerm_key_vault.vault.id
-  role_definition_name = "User Access Administrator "
+  role_definition_name = "User Access Administrator"
 }
 
 # Create a database for the fake ERP system
@@ -302,25 +385,6 @@ resource "azurerm_monitor_diagnostic_setting" "kv_logs" {
 
   enabled_log {
     category_group = "allLogs"
-  }
-
-  enabled_log {
-    category_group = "audit"
-  }
-
-
-  metric {
-    category = "AllMetrics"
-  }
-}
-
-resource "azurerm_monitor_diagnostic_setting" "activity_logs" {
-  name                       = "kv_activity_logs"
-  target_resource_id         = azurerm_key_vault.vault.id
-  log_analytics_workspace_id = azurerm_log_analytics_workspace.ai.id
-
-  enabled_log {
-    category = "allLogs"
   }
 
   enabled_log {
