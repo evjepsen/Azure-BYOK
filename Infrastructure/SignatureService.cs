@@ -98,28 +98,18 @@ public class SignatureService : ISignatureService
 
     public async Task<SignResult> UseAzureToSign(byte[] dataToSign)
     {
-        try
-        {
-            // Create a CryptographyClient using the ID of the certificate
-            var certificate = await GetAzureSigningCertificate();
-            var cryptoClient = _cryptographyClientFactory.GetCryptographyClient(certificate.KeyId);
-            
-            // Prepare data for signing, should be pre-hashed
-            var hash = DigestData(dataToSign);
-            
-            // Sign the data using the CryptographyClient
-            _logger.LogInformation("Key vault signed kek ({length} bytes)", dataToSign.Length);
-            var signResult = await cryptoClient.SignAsync(SignatureAlgorithm.RS256, hash);
-            
-            return signResult;
-        }
-        catch (Exception e)
-        {
-            // Catch in order to log the error
-            _logger.LogError("Could not sign data. Failed with error: {error}", e.Message);
-            // Rethrow the exception to propagate exception to controller
-            throw;
-        }
+        // Create a CryptographyClient using the ID of the certificate
+        var certificate = await GetAzureSigningCertificate();
+        var cryptoClient = _cryptographyClientFactory.GetCryptographyClient(certificate.KeyId);
+        
+        // Prepare data for signing, should be pre-hashed
+        var hash = DigestData(dataToSign);
+        
+        // Sign the data using the CryptographyClient
+        _logger.LogInformation("Key vault signed kek ({length} bytes)", dataToSign.Length);
+        var signResult = await cryptoClient.SignAsync(SignatureAlgorithm.RS256, hash);
+        
+        return signResult;
     }
 
     public async Task<KeyVaultCertificateWithPolicy> GetAzureSigningCertificate()
