@@ -1,9 +1,11 @@
 # Azure BYOK implementation
+This project is a proof-of-concept implementation of Bring Your Own Key (BYOK) using Azure Key Vault and Azure Active Directory (Azure AD). Developed as part of a Bachelor’s thesis in Computer Science, it demonstrates how organizations can enable their customers to maintain control over their encryption keys while using Microsoft Azure services.
 
+This project is intended for educational purposes and serves as a foundation for further development in cloud security and key management solutions.
 
 ## Setup
 
-### Log in with `az`
+### Log in withth `az`
 
 You have to login with the `az` CLI tool, like:
 ```bash
